@@ -3,18 +3,16 @@ import numpy as np
 import re
 
 def write_to_file(ecg_plot, rhythm_name, index):
-    if not os.path.exists("./"+rhythm_name):
-        os.makedirs("./"+rhythm_name)
+    if not os.path.exists("./processed_data/"+rhythm_name):
+        os.makedirs("./processed_data/"+rhythm_name)
 
-    f= open(rhythm_name+"/ecg_"+str(index)+".ecg","wb")
+    f= open("./processed_data/"+rhythm_name+"/ecg_"+str(index)+".ecg","wb")
     for value in ecg_plot:
         to_write = str(value) + " "
         bin = np.int16(to_write)
 
         f.write(bin)
     f.close()
-
-os.chdir("./raw_ecg_data")
 
 ecg_files_found = []
 ecg_plots = []
@@ -27,7 +25,7 @@ rhythm_name = []
 
 global_file_written_counter = 0
 
-for file in glob.glob("*.ecg"):
+for file in glob.glob("./raw_ecg_data/*.ecg"):
 
     f = open(file,"r")
 

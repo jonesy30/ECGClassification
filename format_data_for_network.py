@@ -33,16 +33,15 @@ subfolders = [f.name for f in os.scandir('.') if f.is_dir() ]
 
 data_labels = []
 for folder in subfolders:
-    if folder != "network_data":
-        for root, dirs, files in os.walk(folder, topdown=False):
-            for name in files:
-                filename = str(os.path.join(root, name))
-                data = feature_extract_ecg(filename)
-                data_labels.append([data,folder,name])
+    for root, dirs, files in os.walk(folder, topdown=False):
+        for name in files:
+            filename = str(os.path.join(root, name))
+            data = feature_extract_ecg(filename)
+            data_labels.append([data,folder,os.path.splitext(name)[0]])
 
 validation_set = random.sample(range(0, 819), 205)
 for i,item in enumerate(validation_set):
-    validation_set[i] = "ecg_"+str(item)+".ecg"
+    validation_set[i] = "ecg_"+str(item)
 
 setup_files()
 for item in data_labels:

@@ -37,7 +37,8 @@ for folder in subfolders:
         for name in files:
             filename = str(os.path.join(root, name))
             data = feature_extract_ecg(filename)
-            data_labels.append([data,folder,os.path.splitext(name)[0]])
+            if data != None:
+                data_labels.append([data,folder,os.path.splitext(name)[0]])
 
 validation_set = random.sample(range(0, 819), 205)
 for i,item in enumerate(validation_set):

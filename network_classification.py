@@ -8,9 +8,11 @@ import os
 from tensorflow.keras.optimizers import SGD
 
 #class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
+#class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
 #class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-class_names = ['AFIB', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
+#class_names = ['AFIB', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
+class_names = ['AFIB', 'NOISE', 'NSR']
+#class_names = ['NSR','OTHER']
 
 
 def read_data(filename):
@@ -24,18 +26,27 @@ def read_data(filename):
         label_text = ""
         for i,line in enumerate(f):
             line = line.replace("\n","")
-            if i < 1:
-                line_segments = line.split()
-                for i,item in enumerate(line_segments):
-                    line_segments[i] = float(item)
+            # if i < 1:
+            #     line_segments = line.split()
+            #     for i,item in enumerate(line_segments):
+            #         line_segments[i] = float(item)
 
-                for item in line_segments:
-                    found_data.append(item)
+            #     for item in line_segments:
+            #         found_data.append(item)
+            if i < 8:
+                #line_segments = line.split()
+                #for i,item in enumerate(line_segments):
+                #    line_segments[i] = float(item)
+
+                found_data.append(float(line))
+
+                #for item in line_segments:
+                #    found_data.append(item)
             else:
                 label_text = line
-                if label_text != "AFL" and label_text != "SUDDEN_BRADY" and label_text != "NSR":
-                    index = class_names.index(line)
-                    label = index
+                #if label_text != "OTHER":
+                index = class_names.index(line)
+                label = index
         f.close()
 
         if label != "":
@@ -44,8 +55,8 @@ def read_data(filename):
     
     return data, labels
 
-(training_data, training_labels) = read_data("./processed_data/network_data_ecg_samples/training_set/")
-(validation_data, validation_labels) = read_data("./processed_data/network_data_ecg_samples/validation_set/")
+(training_data, training_labels) = read_data("./processed_data/network_data/training_set/")
+(validation_data, validation_labels) = read_data("./processed_data/network_data/validation_set/")
 
 # for item in validation_data:
 #     training_data.append(item)
@@ -73,15 +84,19 @@ for i,item in enumerate(validation_labels):
 validation_labels = np.array(validation_labels)
 
 model = keras.Sequential([
-    keras.layers.Dense(64, activation=tf.nn.relu),
-    keras.layers.Dense(64, activation=tf.nn.relu),
-    keras.layers.Dense(len(class_names), activation=tf.nn.softmax)
+    #keras.layers.Dense(6, activation=tf.nn.sigmoid),
+    #keras.layers.Dense(12, activation=tf.nn.sigmoid),
+    keras.layers.Dense(32, activation=tf.nn.relu),
+    keras.layers.Dense(32, activation=tf.nn.relu),
+    #keras.layers.Dense(32, activation=tf.nn.relu),   
+    keras.layers.Dense(len(class_names), activation
+    =tf.nn.softmax)
 ])
 
 rms = keras.optimizers.RMSprop(learning_rate=0.001, rho=0.9)
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
-model.fit(training_data, training_labels, epochs=1000)
+model.fit(training_data, training_labels, epochs=500)
 
 # make a prediction
 predicted_data = model.predict(validation_data)
@@ -113,7 +128,10 @@ print("Incorrect matrix = "+str(incorrect_predictions))
 accuracy_of_predictions = [0]*len(class_names)
 for i,item in enumerate(correct_predictions):
     total_labels = correct_predictions[i] + incorrect_predictions[i]
-    accuracy_of_predictions[i] = correct_predictions[i]/total_labels*100
+    if total_labels!=0:
+        accuracy_of_predictions[i] = correct_predictions[i]/total_labels*100
+    else:
+        accuracy_of_predictions[i] = np.nan
 
 accuracy_of_predictions.append(accuracy*100)
 

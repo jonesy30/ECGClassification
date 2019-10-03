@@ -3,11 +3,41 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import freqz
 from scipy.signal import butter, lfilter
+from scipy import signal
+
+#NOTE: Highpass/lowpass filtering has already been done in the pre_processing step
+#Maybe this is in the wrong place but it's useful for everything so I'm happy with it for now
+
+def butter_highpass(cutoff, fs, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = signal.butter(order, normal_cutoff, btype='high', analog=False)
+    return b, a
+
+def butter_highpass_filter(data, cutoff, fs, order=5):
+    b, a = butter_highpass(cutoff, fs, order=order)
+    y = signal.filtfilt(b, a, data)
+    return y
+
+def butter_lowpass(cutoff, fs, order):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return b, a
+
+def butter_lowpass_filter(data, cutoff, fs, order):
+    b, a = butter_lowpass(cutoff, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
 
 def feature_extract_ecg(file_string):
+    
+    print(file_string)
     f = open(file_string,"r")
 
     ecg_plot = np.fromfile(f, dtype=np.int16)
+    if len(ecg_plot) < 50:
+        return None
     #ecg_plot = ecg_plot[:256]
 
     #Five point filtering
@@ -41,6 +71,7 @@ def feature_extract_ecg(file_string):
     N = 35
     moving_window_integration = []
     element_index = 0
+    print(str(len(ecg_plot)))
     while element_index < len(ecg_plot):
 
         inner = 0
@@ -71,8 +102,13 @@ def feature_extract_ecg(file_string):
     # Runs start and end where absdiff is 1.
     ranges = np.where(absdiff == 1)[0].reshape(-1, 2)
 
+    qrs_starts = []
+    qrs_ends = []
+
     qrs_length = []
     for qrs_block in ranges:
+        qrs_starts.append(qrs_block[0])
+        qrs_ends.append(qrs_block[1])
         length = qrs_block[1] - qrs_block[0]
         qrs_length.append(length)
 
@@ -146,7 +182,7 @@ def feature_extract_ecg(file_string):
         variance_qrs_length = 0.0
 
     if __name__ == "__main__":
-        return ecg_plot, five_point_array, average_squared, moving_window_integration, derivation
+        return ecg_plot, five_point_array, average_squared, moving_window_integration, derivation, r_max_indexes, qrs_starts, qrs_ends
 
     return max_r, min_r, mean_rr, variance_rr, max_qrs_length, min_qrs_length, mean_qrs_length, variance_qrs_length
 
@@ -158,13 +194,21 @@ def feature_extract_ecg(file_string):
 if __name__ == "__main__":
 
     #Magic Numbers
-    ECG_SELECTION = 112
-    file_string = "raw_ecg_data/NOISE/ecg_" + str(ECG_SELECTION) + ".ecg"
-    [ecg_plot, five_point_array, average_squared, moving_window_integration, derivation] = feature_extract_ecg(file_string)
+    ECG_SELECTION = 657
+    file_string = "processed_data/NSR/ecg_" + str(ECG_SELECTION) + ".ecg"
+    [ecg_plot, five_point_array, average_squared, moving_window_integration, derivation, r_max_indexes, qrs_starts, qrs_ends] = feature_extract_ecg(file_string)
 
-    plt.plot(ecg_plot,label="unfiltered ECG")
+    plt.plot(ecg_plot,'r',label="unfiltered ECG")
     plt.title("ECG Signal")
-    plt.plot(five_point_array,label="five point derivation")
+    plt.plot(five_point_array,'g--',label="five point derivation")
+    for max in r_max_indexes:
+        plt.axvline(x=max,label="Max "+str(max))
+
+    for qrs_start in qrs_starts:
+        plt.plot(qrs_start,0,'r+')
+    
+    for qrs_end in qrs_ends:
+        plt.plot(qrs_end,0,'g+')
 
     plt.legend(loc='upper left')
     plt.figure()
@@ -172,5 +216,80 @@ if __name__ == "__main__":
     plt.plot(moving_window_integration,'g',label="moving window integration")
     plt.plot(derivation,label="derivation")
     plt.title("Squared Five Point Analysis")
+    plt.legend(loc='upper left')
+    #plt.show()
+
+    sub_plot = ecg_plot[r_max_indexes[1]:r_max_indexes[2]]
+
+    lower_bound = (len(sub_plot)//10)
+    upper_bound = len(sub_plot)-lower_bound
+
+    sub_plot = sub_plot[lower_bound:upper_bound]
+
+    unfiltered_subplot = sub_plot
+    
+    #order = 25
+    #fs = 10000.0
+    #sub_plot = butter_lowpass_filter(sub_plot, 1000, fs, order)
+    cutoff = 1.5
+    order = 2
+    fs = 200
+    sub_plot = butter_highpass_filter(sub_plot, cutoff, fs, order)
+
+    sub_plot = butter_lowpass_filter(sub_plot, 30, 200, 2)
+
+    N = 5
+    moving_window_integration = []
+    element_index = 0
+    while element_index < len(sub_plot):
+
+        inner = 0
+        for i in range(1,N+1):
+            inner = inner + sub_plot[(element_index - (N-i))]
+        
+        y = (1.0/N) * inner
+        element_index = element_index + 1
+
+        moving_window_integration.append(y)
+    
+    derivation = np.gradient(moving_window_integration)
+    #derivation = np.power(derivation,2)
+
+    for i,item in enumerate(sub_plot):
+        if item < 1:
+            sub_plot[i] = 0
+    
+    isnonzero = np.concatenate(([0], (np.asarray(sub_plot) != 0).view(np.int8), [0]))
+    absdiff = np.abs(np.diff(isnonzero))
+    # Runs start and end where absdiff is 1.
+    nonzero_ranges = np.where(absdiff == 1)[0].reshape(-1, 2)
+
+    t_wave = nonzero_ranges[0]
+    p_wave = [0,0]
+    if len(nonzero_ranges) > 1:
+        p_wave = nonzero_ranges[-1]
+
+    print("R max = "+str(r_max_indexes[1]))
+    print("T wave before = "+str(t_wave))
+    print("P wave before = "+str(p_wave))
+
+
+    for i,item in enumerate(t_wave):
+        t_wave[i] = item + r_max_indexes[1] + lower_bound
+
+    for i,item in enumerate(p_wave):
+        p_wave[i] = item + r_max_indexes[1] + lower_bound
+
+    print("T-wave = "+str(t_wave))
+    print("P-wave = "+str(p_wave))
+
+    plt.legend(loc='upper left')
+    plt.figure()
+    plt.plot(unfiltered_subplot, label="Unfiltered plot")
+    plt.plot(sub_plot,label="Noise filtered plot plot")
+    plt.plot(moving_window_integration, label="Moving window filtered")
+    plt.plot(derivation,label="Derivation filtered")
+    plt.axhline(y=0)
+    plt.title("Sub plot")
     plt.legend(loc='upper left')
     plt.show()

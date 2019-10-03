@@ -1,32 +1,67 @@
 import glob, os
 import numpy as np
 import re
+import scipy
+import sys  
+from scipy import signal
+from scipy import pi
+from scipy.io.wavfile import write
+import matplotlib.pyplot as plt
+import numpy as np    
+from scipy.signal import butter, lfilter, freqz 
 
 global_file_counter = 0
+
+def butter_highpass(cutoff, fs, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = signal.butter(order, normal_cutoff, btype='high', analog=False)
+    return b, a
+
+def butter_highpass_filter(data, cutoff, fs, order=5):
+    b, a = butter_highpass(cutoff, fs, order=order)
+    y = signal.filtfilt(b, a, data)
+    return y
+
+def butter_lowpass(cutoff, fs, order):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return b, a
+
+def butter_lowpass_filter(data, cutoff, fs, order):
+    b, a = butter_lowpass(cutoff, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
 
 def write_to_file(ecg_plot, rhythm_name, global_file_counter):
     if not os.path.exists("./processed_data/"+rhythm_name):
         os.makedirs("./processed_data/"+rhythm_name)
 
-    f= open("./processed_data/"+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
-    n_counter = 0
-    samples = 500
-    for value in ecg_plot:
-        print("N = "+str(n_counter))
-        if (n_counter % 500 == 0):
-            print("500 samples reached, writing new file")
-            f.close()
-            global_file_counter = global_file_counter + 1
-            f= open("./processed_data/"+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
-        
-        n_counter = n_counter + 1
-        to_write = str(value) + " "
-        bin = np.int16(to_write)
+    if len(ecg_plot) != 0:
+        f= open("./processed_data/"+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
+        n_counter = 0
+        samples = 500
+        cutoff = 100
+        order = 6
+        fs = 100000.0
+        ecg_plot_filtered = butter_highpass_filter(ecg_plot, cutoff, fs, order)
+        ecg_plot_filtered = butter_lowpass_filter(ecg_plot_filtered, 10000, fs, order)
 
-        f.write(bin)
-    f.close()
-    global_file_counter = global_file_counter + 1
-    print("Global counter = "+str(global_file_counter))
+        for i,value in enumerate(ecg_plot_filtered):
+            value_int = int(round(value))
+            if (n_counter % 500 == 0):
+                f.close()
+                global_file_counter = global_file_counter + 1
+                f= open("./processed_data/"+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
+            
+            n_counter = n_counter + 1
+            to_write = str(value_int) + " "
+            bin = np.int16(to_write)
+
+            f.write(bin)
+        f.close()
+        global_file_counter = global_file_counter + 1
     return global_file_counter
 
 ecg_files_found = []
@@ -96,12 +131,6 @@ for ecg_index,label in enumerate(labels):
 
                 global_file_counter = write_to_file(ecg_subsection, ecg_label, global_file_counter)
 
-print(ecg_plots[0])
-print(labels[0])
 
-print()
-print(str(len(ecg_plots)))
-print(str(len(labels)))
 
-print("Hello!!")
-print(information_label[0])
+print("Complete!")

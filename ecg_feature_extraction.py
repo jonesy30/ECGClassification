@@ -30,9 +30,60 @@ def butter_lowpass_filter(data, cutoff, fs, order):
     y = lfilter(b, a, data)
     return y
 
+def get_t_p_wave(ecg_plot, r_max_indexes):
+
+    if len(r_max_indexes) < 3:
+        return 0,0
+    
+    sub_plot = ecg_plot[r_max_indexes[1]:r_max_indexes[2]]
+
+    if len(sub_plot) < 20:
+        return 0,0
+
+    lower_bound = (len(sub_plot)//10)
+    upper_bound = len(sub_plot)-lower_bound
+
+    sub_plot = sub_plot[lower_bound:upper_bound]
+    
+    sub_plot = butter_highpass_filter(sub_plot, 1.5, 200, 2)
+
+    sub_plot = butter_lowpass_filter(sub_plot, 30, 200, 2)
+
+    for i,item in enumerate(sub_plot):
+        if item < 1:
+            sub_plot[i] = 0
+    
+    isnonzero = np.concatenate(([0], (np.asarray(sub_plot) != 0).view(np.int8), [0]))
+    absdiff = np.abs(np.diff(isnonzero))
+    nonzero_ranges = np.where(absdiff == 1)[0].reshape(-1, 2)
+
+    if len(nonzero_ranges) != 0:
+        t_wave = nonzero_ranges[0]
+    else:
+        t_wave = [0,0]
+    p_wave = [0,0]
+    if len(nonzero_ranges) > 1:
+        p_wave = nonzero_ranges[-1]
+
+    if np.array_equal(t_wave,[0,0]):
+        t_wave = t_wave
+    else:
+        for i,item in enumerate(t_wave):
+            t_wave[i] = item + r_max_indexes[1] + lower_bound
+
+    if np.array_equal(p_wave,[0,0]):
+        p_wave = p_wave
+    else:
+        for i,item in enumerate(p_wave):
+            p_wave[i] = item + r_max_indexes[1] + lower_bound
+
+    t_wave_length = t_wave[1] - t_wave[0]
+    p_wave_length = p_wave[1] - p_wave[0]
+
+    return t_wave_length, p_wave_length
+
 def feature_extract_ecg(file_string):
     
-    print(file_string)
     f = open(file_string,"r")
 
     ecg_plot = np.fromfile(f, dtype=np.int16)
@@ -71,7 +122,6 @@ def feature_extract_ecg(file_string):
     N = 35
     moving_window_integration = []
     element_index = 0
-    print(str(len(ecg_plot)))
     while element_index < len(ecg_plot):
 
         inner = 0
@@ -127,6 +177,10 @@ def feature_extract_ecg(file_string):
     for index,item in enumerate(average_squared):
         if item > 0 and item < zero_upper_bound:
             average_squared_zeroed[index] = 0
+    
+    for index,item in enumerate(average_squared_zeroed[1:-1]):
+        if average_squared_zeroed[index-1] != 0 and average_squared_zeroed[index+1] !=0 and average_squared_zeroed[index] == 0:
+            average_squared_zeroed[index] = average_squared_zeroed[index-1]
         
     # Create an array that is 1 where a is nonzero, and pad each end with an extra 0.
     isnonzero = np.concatenate(([0], (np.asarray(average_squared_zeroed) != 0).view(np.int8), [0]))
@@ -180,11 +234,13 @@ def feature_extract_ecg(file_string):
         max_qrs_length = 0.0
         mean_qrs_length = 0.0
         variance_qrs_length = 0.0
+    
+    t_wave_length, p_wave_length = get_t_p_wave(ecg_plot, r_max_indexes)
 
     if __name__ == "__main__":
         return ecg_plot, five_point_array, average_squared, moving_window_integration, derivation, r_max_indexes, qrs_starts, qrs_ends
 
-    return max_r, min_r, mean_rr, variance_rr, max_qrs_length, min_qrs_length, mean_qrs_length, variance_qrs_length
+    return max_r, min_r, mean_rr, variance_rr, max_qrs_length, min_qrs_length, mean_qrs_length, variance_qrs_length, t_wave_length, p_wave_length
 
     # print("QRS max = "+str(max_qrs_length))
     # print("QRS min = "+str(min_qrs_length))
@@ -194,7 +250,7 @@ def feature_extract_ecg(file_string):
 if __name__ == "__main__":
 
     #Magic Numbers
-    ECG_SELECTION = 657
+    ECG_SELECTION = 168
     file_string = "processed_data/NSR/ecg_" + str(ECG_SELECTION) + ".ecg"
     [ecg_plot, five_point_array, average_squared, moving_window_integration, derivation, r_max_indexes, qrs_starts, qrs_ends] = feature_extract_ecg(file_string)
 
@@ -216,80 +272,5 @@ if __name__ == "__main__":
     plt.plot(moving_window_integration,'g',label="moving window integration")
     plt.plot(derivation,label="derivation")
     plt.title("Squared Five Point Analysis")
-    plt.legend(loc='upper left')
-    #plt.show()
-
-    sub_plot = ecg_plot[r_max_indexes[1]:r_max_indexes[2]]
-
-    lower_bound = (len(sub_plot)//10)
-    upper_bound = len(sub_plot)-lower_bound
-
-    sub_plot = sub_plot[lower_bound:upper_bound]
-
-    unfiltered_subplot = sub_plot
-    
-    #order = 25
-    #fs = 10000.0
-    #sub_plot = butter_lowpass_filter(sub_plot, 1000, fs, order)
-    cutoff = 1.5
-    order = 2
-    fs = 200
-    sub_plot = butter_highpass_filter(sub_plot, cutoff, fs, order)
-
-    sub_plot = butter_lowpass_filter(sub_plot, 30, 200, 2)
-
-    N = 5
-    moving_window_integration = []
-    element_index = 0
-    while element_index < len(sub_plot):
-
-        inner = 0
-        for i in range(1,N+1):
-            inner = inner + sub_plot[(element_index - (N-i))]
-        
-        y = (1.0/N) * inner
-        element_index = element_index + 1
-
-        moving_window_integration.append(y)
-    
-    derivation = np.gradient(moving_window_integration)
-    #derivation = np.power(derivation,2)
-
-    for i,item in enumerate(sub_plot):
-        if item < 1:
-            sub_plot[i] = 0
-    
-    isnonzero = np.concatenate(([0], (np.asarray(sub_plot) != 0).view(np.int8), [0]))
-    absdiff = np.abs(np.diff(isnonzero))
-    # Runs start and end where absdiff is 1.
-    nonzero_ranges = np.where(absdiff == 1)[0].reshape(-1, 2)
-
-    t_wave = nonzero_ranges[0]
-    p_wave = [0,0]
-    if len(nonzero_ranges) > 1:
-        p_wave = nonzero_ranges[-1]
-
-    print("R max = "+str(r_max_indexes[1]))
-    print("T wave before = "+str(t_wave))
-    print("P wave before = "+str(p_wave))
-
-
-    for i,item in enumerate(t_wave):
-        t_wave[i] = item + r_max_indexes[1] + lower_bound
-
-    for i,item in enumerate(p_wave):
-        p_wave[i] = item + r_max_indexes[1] + lower_bound
-
-    print("T-wave = "+str(t_wave))
-    print("P-wave = "+str(p_wave))
-
-    plt.legend(loc='upper left')
-    plt.figure()
-    plt.plot(unfiltered_subplot, label="Unfiltered plot")
-    plt.plot(sub_plot,label="Noise filtered plot plot")
-    plt.plot(moving_window_integration, label="Moving window filtered")
-    plt.plot(derivation,label="Derivation filtered")
-    plt.axhline(y=0)
-    plt.title("Sub plot")
     plt.legend(loc='upper left')
     plt.show()

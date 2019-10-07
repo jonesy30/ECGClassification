@@ -11,20 +11,20 @@ def read_ecg_data(filename):
     return ecg_plot
 
 def setup_files():
-    if not os.path.exists("./network_data_ecg_samples"):
-        os.makedirs("./network_data_ecg_samples")
-    if os.path.exists("./network_data_ecg_samples/validation_set"):
-        shutil.rmtree("./network_data_ecg_samples/validation_set")
-    os.makedirs("./network_data_ecg_samples/validation_set")
-    if os.path.exists("./network_data_ecg_samples/training_set"):
-        shutil.rmtree("./network_data_ecg_samples/training_set")
-    os.makedirs("./network_data_ecg_samples/training_set")
+    if not os.path.exists("./network_data"):
+        os.makedirs("./network_data")
+    if os.path.exists("./network_data/validation_set"):
+        shutil.rmtree("./network_data/validation_set")
+    os.makedirs("./network_data/validation_set")
+    if os.path.exists("./network_data/training_set"):
+        shutil.rmtree("./network_data/training_set")
+    os.makedirs("./network_data/training_set")
 
 def write_to_file(data, label, filename, validation_set):
     if filename in validation_set:
-        f = open("./network_data_ecg_samples/validation_set/"+filename+".txt","w")
+        f = open("./network_data/validation_set/"+filename+".txt","w")
     else:
-        f = open("./network_data_ecg_samples/training_set/"+filename+".txt","w")
+        f = open("./network_data/training_set/"+filename+".txt","w")
     write_string = ""
     for value in data:
         write_string = write_string + str(value) + " "
@@ -42,7 +42,7 @@ data_labels = []
 ecg_plot = []
 ecg_plot_lengths = []
 for folder in subfolders:
-    if folder != "network_data" and folder != "network_data_ecg_samples":
+    if folder != "network_data" and folder != "network_data":
         for root, dirs, files in os.walk(folder, topdown=False):
             for name in files:
                 filename = str(os.path.join(root, name))

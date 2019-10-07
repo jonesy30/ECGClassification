@@ -11,9 +11,8 @@ from tensorflow.keras.optimizers import SGD
 #class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
 #class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
 #class_names = ['AFIB', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-class_names = ['AFIB', 'NOISE', 'NSR']
-#class_names = ['NSR','OTHER']
-
+#class_names = ['AFIB', 'NOISE', 'NSR']
+class_names = ['AFIB', 'NSR']
 
 def read_data(filename):
     
@@ -33,15 +32,15 @@ def read_data(filename):
 
             #     for item in line_segments:
             #         found_data.append(item)
-            if i < 8:
-                #line_segments = line.split()
-                #for i,item in enumerate(line_segments):
-                #    line_segments[i] = float(item)
+            if i < 10:
+                line_segments = line.split()
+                for i,item in enumerate(line_segments):
+                   line_segments[i] = float(item)
 
                 found_data.append(float(line))
 
-                #for item in line_segments:
-                #    found_data.append(item)
+                for item in line_segments:
+                   found_data.append(item)
             else:
                 label_text = line
                 #if label_text != "OTHER":
@@ -107,6 +106,8 @@ correct = 0
 correct_predictions = [0]*len(class_names)
 incorrect_predictions = [0]*len(class_names)
 
+incorrectly_identified = []
+
 for i in range(len(validation_data)):
     predicted = np.where(predicted_data[i] == np.amax(predicted_data[i]))
     predicted_value = predicted[0][0]
@@ -119,6 +120,7 @@ for i in range(len(validation_data)):
         correct_predictions[validation_labels[i]] = correct_predictions[validation_labels[i]] + 1
     else:
         incorrect_predictions[validation_labels[i]] = incorrect_predictions[validation_labels[i]] + 1
+        incorrectly_identified.append([validation_data[i],i])
 
 accuracy = correct/tested
 print("Accuracy = "+str(accuracy))
@@ -143,6 +145,11 @@ class_names.append("TOTAL")
 test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 print("Test accuracy: "+str(test_acc))
 
+print("Incorrectly identified")
+for item in incorrectly_identified:
+    [data, index] = item
+    print(str(index))
+
 #print("Accuracy of predictions = "+str(accuracy_of_predictions))
 plt.bar(class_names, accuracy_of_predictions)
 plt.xticks(class_names, fontsize=7, rotation=30)
@@ -151,3 +158,11 @@ plt.axis((x1,x2,0,100))
 plt.ylabel("Accuracy of predictions (%)")
 plt.xlabel("Condition")
 plt.show()
+
+# for item in incorrectly_identified:
+#     [data, index] = item
+    
+#     plt.figure()
+#     plt.plot(data)
+#     plt.title(str(index))
+#     plt.show()

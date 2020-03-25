@@ -28,7 +28,7 @@ def write_to_file(data, label, filename, validation_set):
 
     f.close()
 
-os.chdir("./processed_data")
+os.chdir("./split_processed_data")
 subfolders = [f.name for f in os.scandir('.') if f.is_dir() ] 
 
 data_labels = []

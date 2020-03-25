@@ -1,20 +1,21 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.utils import to_categorical
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from tensorflow.keras.optimizers import SGD
 import pandas as pd
 
 class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-#class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-#class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-#class_names = ['AFIB', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-#class_names = ['AFIB', 'NOISE', 'NSR']
-#class_names = ['AFIB', 'NSR']
-mode = "ECG" #or FEATURE
+
+def normalize(ecg_signal):
+    max_value = max(ecg_signal)
+    min_value = min(ecg_signal)
+
+    range_values = max_value - min_value
+
+    return [(x - min_value)/range_values for x in ecg_signal]
 
 def read_data(filename):
     
@@ -27,48 +28,29 @@ def read_data(filename):
         label_text = ""
         for i,line in enumerate(f):
             line = line.replace("\n","")
-            if mode == "ECG":
-                if i < 1:
-                    line_segments = line.split()
-                    for i,item in enumerate(line_segments):
-                        line_segments[i] = float(item)
+            if i < 1:
+                line_segments = line.split()
+                for i,item in enumerate(line_segments):
+                    line_segments[i] = float(item)
 
-                    for item in line_segments:
-                        found_data.append(item)
-                else:
-                    label_text = line
-                    #if label_text != "OTHER":
-                    index = class_names.index(line)
-                    label = index
-            elif mode == "FEATURE":
-                if i < 10: #this number might be wrong! Check!
-                    line_segments = line.split()
-                    for i,item in enumerate(line_segments):
-                        line_segments[i] = float(item)
-                        found_data.append(float(line))
-
-                    for item in line_segments:
-                        found_data.append(item)
-                else:
-                    label_text = line
-                    #if label_text != "OTHER":
-                    index = class_names.index(line)
-                    label = index
+                for item in line_segments:
+                    found_data.append(item)
+            else:
+                label_text = line
+                #if label_text != "OTHER":
+                index = class_names.index(line)
+                label = index
         f.close()
 
         if label != "":
-            data.append(found_data)
+            normalized_data = normalize(found_data)
+            data.append(normalized_data)
             labels.append(label)
     
     return data, labels
 
 (training_data, training_labels) = read_data("./split_processed_data/network_data/training_set/")
 (validation_data, validation_labels) = read_data("./split_processed_data/network_data/validation_set/")
-
-# for item in validation_data:
-#     training_data.append(item)
-# for item in validation_labels:
-#     training_labels.append(item)
 
 training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
@@ -99,27 +81,37 @@ for value in range(df['label'].nunique()):
         df_oversampled = pd.concat([df_oversampled, df_class_over])
 
 training_labels = df_oversampled['label'].tolist()
-training_labels = np.array(training_labels)
-
 training_data = df_oversampled.drop(columns='label').to_numpy()
 #Aaaaand we're done upsampling! Hooray!
 
+training_data = training_data[:, :, np.newaxis]
+training_labels = to_categorical(training_labels)
+
+validation_data = validation_data[:, :, np.newaxis]
+validation_labels = to_categorical(validation_labels)
+
 model = keras.Sequential([
-    #keras.layers.Dense(6, activation=tf.nn.sigmoid),
-    #keras.layers.Dense(12, activation=tf.nn.sigmoid),
-    keras.layers.Dense(32, activation=tf.nn.relu),
-    keras.layers.Dense(32, activation=tf.nn.relu),
-    #keras.layers.Dense(32, activation=tf.nn.relu),   
-    keras.layers.Dense(len(class_names), activation
-    =tf.nn.softmax)
+    keras.layers.InputLayer(input_shape=[400,1]),
+    keras.layers.Conv1D(kernel_size=10, filters=128, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
+    keras.layers.AveragePooling1D(pool_size=2, strides=1),
+    keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
+    keras.layers.AveragePooling1D(pool_size=2, strides=1),
+    keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
+    keras.layers.AveragePooling1D(pool_size=2, strides=1),
+    keras.layers.Flatten(),
+    keras.layers.Dense(len(class_names), activation='softmax')
 ])
 
-rms = keras.optimizers.RMSprop(learning_rate=0.001, rho=0.9)
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+#MAGIC NUMBERS
+verbose = 1
+epochs = 50
+batch_size = 100
 
-model.fit(training_data, training_labels, epochs=500)
+model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
+model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,verbose=verbose)
+print("Evaluating....")
 
-# make a prediction
+test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 predicted_data = model.predict(validation_data)
 # show the inputs and predicted outputs
 
@@ -128,26 +120,36 @@ correct = 0
 correct_predictions = [0]*len(class_names)
 incorrect_predictions = [0]*len(class_names)
 
+predicted_values = []
+
 incorrectly_identified = []
 
 for i in range(len(validation_data)):
     predicted = np.where(predicted_data[i] == np.amax(predicted_data[i]))
     predicted_value = predicted[0][0]
+    predicted_values.append(predicted_value)
 
-    print("i = "+str(i)+" Label = "+str(validation_labels[i]) + ", Predicted = "+str(predicted_value))
+    actual = list(validation_labels[i]).index(1)
 
     tested = tested + 1
-    if validation_labels[i] == predicted_value:
+    if actual == predicted_value:
         correct = correct + 1
-        correct_predictions[validation_labels[i]] = correct_predictions[validation_labels[i]] + 1
+        correct_predictions[actual] = correct_predictions[actual] + 1
     else:
-        incorrect_predictions[validation_labels[i]] = incorrect_predictions[validation_labels[i]] + 1
+        incorrect_predictions[actual] = incorrect_predictions[actual] + 1
         incorrectly_identified.append([validation_data[i],i])
 
 accuracy = correct/tested
 print("Accuracy = "+str(accuracy))
-print("Correct matrix = "+str(correct_predictions))
-print("Incorrect matrix = "+str(incorrect_predictions))
+print("Correct matrix = ")
+print(correct_predictions)
+print("Incorrect matrix = ")
+print(incorrect_predictions)
+
+predicted_values = pd.DataFrame(predicted_values,columns=['predicted'])
+print("Predicted Value Count Check")
+print(predicted_values['predicted'].value_counts())
+print()
 
 accuracy_of_predictions = [0]*len(class_names)
 for i,item in enumerate(correct_predictions):
@@ -164,28 +166,20 @@ for i,item in enumerate(class_names):
     class_names[i] = class_names[i] + " ("+str(total)+")"
 class_names.append("TOTAL")
 
-test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 print("Test accuracy: "+str(test_acc))
 
-# print("Incorrectly identified")
-# for item in incorrectly_identified:
-#     [data, index] = item
-#     print(str(index))
+for item in incorrectly_identified:
+    [data, index] = item
 
 #print("Accuracy of predictions = "+str(accuracy_of_predictions))
 plt.bar(class_names, accuracy_of_predictions)
 plt.xticks(class_names, fontsize=7, rotation=30)
+plt.title("Overall Accuracy = "+str(round(test_acc*100,2))+"%")
 x1,x2,y1,y2 = plt.axis()
 plt.axis((x1,x2,0,100))
-plt.title("Fully Connected NN\nOverall Accuracy = "+str(round(test_acc*100,2))+"%")
 plt.ylabel("Accuracy of predictions (%)")
 plt.xlabel("Condition")
 plt.show()
 
-# for item in incorrectly_identified:
-#     [data, index] = item
-    
-#     plt.figure()
-#     plt.plot(data)
-#     plt.title(str(index))
-#     plt.show()
+
+

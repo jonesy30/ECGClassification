@@ -103,6 +103,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+/split_processed_data
 /raw_ecg_data
-/processed_data
 

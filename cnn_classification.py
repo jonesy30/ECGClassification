@@ -174,12 +174,9 @@ for item in incorrectly_identified:
 #print("Accuracy of predictions = "+str(accuracy_of_predictions))
 plt.bar(class_names, accuracy_of_predictions)
 plt.xticks(class_names, fontsize=7, rotation=30)
-plt.title("Overall Accuracy = "+str(round(test_acc*100,2))+"%")
+plt.title("CNN\nOverall Accuracy = "+str(round(test_acc*100,2))+"%")
 x1,x2,y1,y2 = plt.axis()
 plt.axis((x1,x2,0,100))
 plt.ylabel("Accuracy of predictions (%)")
 plt.xlabel("Condition")
 plt.show()
-
-
-

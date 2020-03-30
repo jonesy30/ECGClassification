@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.layers import Dropout
+from keras.constraints import maxnorm
 import pandas as pd
 
 class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
@@ -62,8 +64,8 @@ def read_data(filename):
     
     return data, labels
 
-(training_data, training_labels) = read_data("./split_processed_data/network_data/training_set/")
-(validation_data, validation_labels) = read_data("./split_processed_data/network_data/validation_set/")
+(training_data, training_labels) = read_data("./split_processed_data/network_data_manlio_filtered/training_set/")
+(validation_data, validation_labels) = read_data("./split_processed_data/network_data_manlio_filtered/validation_set/")
 
 # for item in validation_data:
 #     training_data.append(item)
@@ -104,20 +106,33 @@ training_labels = np.array(training_labels)
 training_data = df_oversampled.drop(columns='label').to_numpy()
 #Aaaaand we're done upsampling! Hooray!
 
-model = keras.Sequential([
-    #keras.layers.Dense(6, activation=tf.nn.sigmoid),
-    #keras.layers.Dense(12, activation=tf.nn.sigmoid),
-    keras.layers.Dense(32, activation=tf.nn.relu),
-    keras.layers.Dense(32, activation=tf.nn.relu),
-    #keras.layers.Dense(32, activation=tf.nn.relu),   
-    keras.layers.Dense(len(class_names), activation
-    =tf.nn.softmax)
-])
+# model = keras.Sequential([
+#     #keras.layers.Dense(6, activation=tf.nn.sigmoid),
+#     #keras.layers.Dense(12, activation=tf.nn.sigmoid),
+#     keras.layers.Dense(32, activation=tf.nn.relu),
+#     keras.layers.Dense(32, activation=tf.nn.relu),
+#     #keras.layers.Dense(32, activation=tf.nn.relu),   
+#     keras.layers.Dense(len(class_names), activation
+#     =tf.nn.softmax)
+# ])
 
-rms = keras.optimizers.RMSprop(learning_rate=0.001, rho=0.9)
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model = keras.Sequential()
+model.add(Dropout(0.2))
 
-model.fit(training_data, training_labels, epochs=500)
+for i in range(16):
+    model.add(keras.layers.Dense(256, activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
+    #model.add(Dropout(0.2))
+model.add(keras.layers.Dense(len(class_names), activation=tf.nn.softmax))
+
+#opt = SGD(lr=0.1, momentum=0.9, decay=0.01)
+#rms = keras.optimizers.RMSprop(learning_rate=0.1, rho=0.9)
+adam = keras.optimizers.Adam(learning_rate=0.001)
+model.compile(optimizer=adam, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+model.fit(training_data, training_labels, epochs=100)
+
+print("Model Summary")
+print(model.summary())
 
 # make a prediction
 predicted_data = model.predict(validation_data)
@@ -134,7 +149,7 @@ for i in range(len(validation_data)):
     predicted = np.where(predicted_data[i] == np.amax(predicted_data[i]))
     predicted_value = predicted[0][0]
 
-    print("i = "+str(i)+" Label = "+str(validation_labels[i]) + ", Predicted = "+str(predicted_value))
+    #print("i = "+str(i)+" Label = "+str(validation_labels[i]) + ", Predicted = "+str(predicted_value))
 
     tested = tested + 1
     if validation_labels[i] == predicted_value:

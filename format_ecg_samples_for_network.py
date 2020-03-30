@@ -4,6 +4,7 @@ import os
 from glob import glob
 import shutil
 import numpy as np
+from noise_reduction import noise_reduce
 
 def read_ecg_data(filename):
     f = open(filename,"r")
@@ -42,11 +43,15 @@ data_labels = []
 ecg_plot = []
 ecg_plot_lengths = []
 for folder in subfolders:
-    if folder != "network_data" and folder != "network_data":
+    if not folder.startswith("network_data"):
         for root, dirs, files in os.walk(folder, topdown=False):
             for name in files:
                 filename = str(os.path.join(root, name))
-                ecg_plot.append(read_ecg_data(filename))
+                ecg = read_ecg_data(filename)
+                #filtered_ecg = noise_reduce(ecg,filename)
+                #ecg_plot.append(filtered_ecg)
+                ecg_plot.append(ecg)
+                #ecg_plot.append(read_ecg_data(filename))
                 data_labels.append(["",folder])
 
 for plot in ecg_plot:

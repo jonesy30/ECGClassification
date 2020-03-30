@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.layers import Dropout
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -49,8 +50,8 @@ def read_data(filename):
     
     return data, labels
 
-(training_data, training_labels) = read_data("./split_processed_data/network_data/training_set/")
-(validation_data, validation_labels) = read_data("./split_processed_data/network_data/validation_set/")
+(training_data, training_labels) = read_data("./split_processed_data/network_data_manlio_filtered/training_set/")
+(validation_data, validation_labels) = read_data("./split_processed_data/network_data_manlio_filtered/validation_set/")
 
 training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
@@ -92,23 +93,32 @@ validation_labels = to_categorical(validation_labels)
 
 model = keras.Sequential([
     keras.layers.InputLayer(input_shape=[400,1]),
-    keras.layers.Conv1D(kernel_size=10, filters=128, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
-    keras.layers.AveragePooling1D(pool_size=2, strides=1),
-    keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
-    keras.layers.AveragePooling1D(pool_size=2, strides=1),
-    keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
-    keras.layers.AveragePooling1D(pool_size=2, strides=1),
-    keras.layers.Flatten(),
-    keras.layers.Dense(len(class_names), activation='softmax')
+    #Dropout(0.2)
+    #keras.layers.Conv1D(kernel_size=10, filters=128, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
+    #keras.layers.AveragePooling1D(pool_size=2, strides=1,padding="same")
 ])
+
+for i in range(2):
+    model.add(keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'))
+    model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1, padding="same"))
+    model.add(Dropout(0.5))
+    #model.add(keras.layers.UpSampling1D(size=5))
+
+#model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1))
+model.add(keras.layers.Flatten())
+model.add(keras.layers.Dense(len(class_names), activation='softmax'))
 
 #MAGIC NUMBERS
 verbose = 1
-epochs = 50
+epochs = 20
 batch_size = 100
 
 model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
 model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,verbose=verbose)
+
+print("Model Summary")
+print(model.summary())
+
 print("Evaluating....")
 
 test_loss, test_acc = model.evaluate(validation_data, validation_labels)

@@ -9,8 +9,16 @@ from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.layers import Dropout
 from keras.constraints import maxnorm
 import pandas as pd
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+from keras.wrappers.scikit_learn import KerasClassifier
+from keras.utils import np_utils
+from tensorflow.keras.utils import to_categorical
+from sklearn.metrics import confusion_matrix
+import itertools
+from plot_confusion_matrix import plot_confusion_matrix
 
-class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
+class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
 #class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
 #class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
 #class_names = ['AFIB', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
@@ -64,8 +72,8 @@ def read_data(filename):
     
     return data, labels
 
-(training_data, training_labels) = read_data("./split_processed_data/network_data_manlio_filtered/training_set/")
-(validation_data, validation_labels) = read_data("./split_processed_data/network_data_manlio_filtered/validation_set/")
+(training_data, training_labels) = read_data("./split_processed_data/network_data_unfiltered/training_set/")
+(validation_data, validation_labels) = read_data("./split_processed_data/network_data_unfiltered/validation_set/")
 
 # for item in validation_data:
 #     training_data.append(item)
@@ -104,6 +112,7 @@ training_labels = df_oversampled['label'].tolist()
 training_labels = np.array(training_labels)
 
 training_data = df_oversampled.drop(columns='label').to_numpy()
+#training_labels = to_categorical(training_labels)   
 #Aaaaand we're done upsampling! Hooray!
 
 # model = keras.Sequential([
@@ -116,27 +125,49 @@ training_data = df_oversampled.drop(columns='label').to_numpy()
 #     =tf.nn.softmax)
 # ])
 
-model = keras.Sequential()
-model.add(Dropout(0.2))
-
-for i in range(16):
-    model.add(keras.layers.Dense(256, activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
-    #model.add(Dropout(0.2))
-model.add(keras.layers.Dense(len(class_names), activation=tf.nn.softmax))
-
 #opt = SGD(lr=0.1, momentum=0.9, decay=0.01)
 #rms = keras.optimizers.RMSprop(learning_rate=0.1, rho=0.9)
-adam = keras.optimizers.Adam(learning_rate=0.001)
-model.compile(optimizer=adam, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
+def baseline_model():
+    model = keras.Sequential()
+    model.add(Dropout(0.2))
+
+    model.add(keras.layers.Dense(256, input_dim=14, activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
+
+    for i in range(15):
+        model.add(keras.layers.Dense(256, activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
+        #model.add(Dropout(0.2))
+    model.add(keras.layers.Dense(len(class_names), activation=tf.nn.softmax))
+
+    adam = keras.optimizers.Adam(learning_rate=0.001)
+    model.compile(optimizer="adagrad", loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+    return model
+
+# estimator = KerasClassifier(build_fn=baseline_model, epochs=10, batch_size=100, verbose=1)
+# kfold = KFold(n_splits=10, shuffle=True)
+# results = cross_val_score(estimator, training_data, training_labels, cv=kfold)
+# print("Baseline: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
+
+model = baseline_model()
 model.fit(training_data, training_labels, epochs=100)
 
 print("Model Summary")
 print(model.summary())
 
 # make a prediction
-predicted_data = model.predict(validation_data)
+predicted_labels = model.predict(validation_data)
 # show the inputs and predicted outputs
+
+#validation_encoded = to_categorical(validation_labels)  
+
+predicted_encoded = np.argmax(predicted_labels, axis=1)
+
+matrix = confusion_matrix(validation_labels, predicted_encoded, normalize='all')
+#disp = plot_confusion_matrix(model, validation_labels, predicted_encoded,display_labels=class_names)
+plot_confusion_matrix(matrix, classes=class_names, normalize=True, title="Confusion Matrix (fully connected)")
+
+plt.figure()
 
 tested = 0
 correct = 0
@@ -146,7 +177,7 @@ incorrect_predictions = [0]*len(class_names)
 incorrectly_identified = []
 
 for i in range(len(validation_data)):
-    predicted = np.where(predicted_data[i] == np.amax(predicted_data[i]))
+    predicted = np.where(predicted_labels[i] == np.amax(predicted_labels[i]))
     predicted_value = predicted[0][0]
 
     #print("i = "+str(i)+" Label = "+str(validation_labels[i]) + ", Predicted = "+str(predicted_value))
@@ -182,11 +213,6 @@ class_names.append("TOTAL")
 test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 print("Test accuracy: "+str(test_acc))
 
-# print("Incorrectly identified")
-# for item in incorrectly_identified:
-#     [data, index] = item
-#     print(str(index))
-
 #print("Accuracy of predictions = "+str(accuracy_of_predictions))
 plt.bar(class_names, accuracy_of_predictions)
 plt.xticks(class_names, fontsize=7, rotation=30)
@@ -196,11 +222,3 @@ plt.title("Fully Connected NN\nOverall Accuracy = "+str(round(test_acc*100,2))+"
 plt.ylabel("Accuracy of predictions (%)")
 plt.xlabel("Condition")
 plt.show()
-
-# for item in incorrectly_identified:
-#     [data, index] = item
-    
-#     plt.figure()
-#     plt.plot(data)
-#     plt.title(str(index))
-#     plt.show()

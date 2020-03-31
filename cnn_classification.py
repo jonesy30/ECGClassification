@@ -7,8 +7,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+from sklearn.metrics import confusion_matrix
+import itertools
+from plot_confusion_matrix import plot_confusion_matrix
 
-class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
+class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
 
 def normalize(ecg_signal):
     max_value = max(ecg_signal)
@@ -50,8 +53,8 @@ def read_data(filename):
     
     return data, labels
 
-(training_data, training_labels) = read_data("./split_processed_data/network_data_manlio_filtered/training_set/")
-(validation_data, validation_labels) = read_data("./split_processed_data/network_data_manlio_filtered/validation_set/")
+(training_data, training_labels) = read_data("./split_processed_data/network_data_unfiltered/training_set/")
+(validation_data, validation_labels) = read_data("./split_processed_data/network_data_unfiltered/validation_set/")
 
 training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
@@ -122,8 +125,20 @@ print(model.summary())
 print("Evaluating....")
 
 test_loss, test_acc = model.evaluate(validation_data, validation_labels)
-predicted_data = model.predict(validation_data)
+predicted_labels = model.predict(validation_data)
 # show the inputs and predicted outputs
+
+predicted_encoded = np.argmax(predicted_labels, axis=1)
+actual_encoded = np.argmax(validation_labels, axis=1)
+
+print(validation_labels[:50])
+print(predicted_encoded[:50])
+
+matrix = confusion_matrix(actual_encoded, predicted_encoded, normalize='all')
+#disp = plot_confusion_matrix(model, validation_labels, predicted_encoded,display_labels=class_names)
+plot_confusion_matrix(matrix, classes=class_names, normalize=True, title="Confusion Matrix (CNN)")
+
+plt.figure()
 
 tested = 0
 correct = 0
@@ -135,7 +150,7 @@ predicted_values = []
 incorrectly_identified = []
 
 for i in range(len(validation_data)):
-    predicted = np.where(predicted_data[i] == np.amax(predicted_data[i]))
+    predicted = np.where(predicted_labels[i] == np.amax(predicted_labels[i]))
     predicted_value = predicted[0][0]
     predicted_values.append(predicted_value)
 

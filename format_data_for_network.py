@@ -1,3 +1,7 @@
+"""
+Format the feature extracted data into filenames
+"""
+
 from ecg_feature_extraction import feature_extract_ecg
 import random
 import os

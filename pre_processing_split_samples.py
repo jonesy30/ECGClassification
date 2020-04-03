@@ -1,3 +1,7 @@
+"""
+File which pre processes the data and splits into equal length chunks
+"""
+
 import glob, os
 import numpy as np
 import re
@@ -35,33 +39,60 @@ def butter_lowpass_filter(data, cutoff, fs, order):
     return y
 
 def write_to_file(ecg_plot, rhythm_name, global_file_counter):
-    if not os.path.exists("./processed_data/"+rhythm_name):
-        os.makedirs("./processed_data/"+rhythm_name)
+    if not os.path.exists("./split_processed_data/"+rhythm_name):
+        os.makedirs("./split_processed_data/"+rhythm_name)
 
     if len(ecg_plot) != 0:
-        f= open("./processed_data/"+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
+        #f= open("./split_processed_data/"+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
         n_counter = 0
-        samples = 500
+        LENGTH = 400
         cutoff = 100
         order = 6
         fs = 100000.0
         ecg_plot_filtered = butter_highpass_filter(ecg_plot, cutoff, fs, order)
-        ecg_plot_filtered = butter_lowpass_filter(ecg_plot_filtered, 10000, fs, order)
+        #ecg_plot_filtered = butter_lowpass_filter(ecg_plot_filtered, 10000, fs, order)
 
-        for i,value in enumerate(ecg_plot_filtered):
-            value_int = int(round(value))
-            if (n_counter % 500 == 0):
-                f.close()
-                global_file_counter = global_file_counter + 1
-                f= open("./processed_data/"+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
+        if len(ecg_plot_filtered) >= LENGTH:
+            complete_chunks = len(ecg_plot_filtered)//LENGTH
+
+            for i in range(complete_chunks):
+                start_index = i * LENGTH
+                end_index = start_index + LENGTH
+
+                new_ecg = ecg_plot_filtered[start_index:end_index]
+                new_ecg = [int(round(x*100)) for x in new_ecg]
+
+                if(len(set(new_ecg))==1):
+                    print("All elements in list are same "+rhythm_name)
+                else:
+                    f= open("./split_processed_data/"+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
+
+                    for i,value_int in enumerate(new_ecg):
+                      
+                        #value = value * 100
+                        #value_int = int(round(value))
+                        to_write = str(value_int) + " "
+                        bin = np.int16(to_write)
+                        f.write(bin)
+
+                    global_file_counter+=1
+                    f.close()
+
+        # for i,value in enumerate(ecg_plot_filtered):
+        #     value_int = int(round(value))
+        #     if (n_counter % samples == 0):
+        #         f.close()
+        #         global_file_counter = global_file_counter + 1
+                
             
-            n_counter = n_counter + 1
-            to_write = str(value_int) + " "
-            bin = np.int16(to_write)
+        #     n_counter = n_counter + 1
+        #     to_write = str(value_int) + " "
+        #     bin = np.int16(to_write)
 
-            f.write(bin)
-        f.close()
-        global_file_counter = global_file_counter + 1
+        #     f.write(bin)
+        # f.close()
+        # global_file_counter = global_file_counter + 1
+    #global_file_counter+=1
     return global_file_counter
 
 ecg_files_found = []
@@ -130,7 +161,5 @@ for ecg_index,label in enumerate(labels):
                 ecg_subsection = this_ecg_plot[int(start_onset):int(this_offset)]
 
                 global_file_counter = write_to_file(ecg_subsection, ecg_label, global_file_counter)
-
-
 
 print("Complete!")

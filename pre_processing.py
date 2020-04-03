@@ -1,3 +1,7 @@
+"""
+Function which pre-processes the raw ECG signal into segments with only one class label
+"""
+
 import glob, os
 import numpy as np
 import re
@@ -10,28 +14,6 @@ import matplotlib.pyplot as plt
 import numpy as np    
 #from scipy.signal import butter, lfilter, freqz 
 
-# def butter_highpass(cutoff, fs, order=5):
-#     nyq = 0.5 * fs
-#     normal_cutoff = cutoff / nyq
-#     b, a = signal.butter(order, normal_cutoff, btype='high', analog=False)
-#     return b, a
-
-# def butter_highpass_filter(data, cutoff, fs, order=5):
-#     b, a = butter_highpass(cutoff, fs, order=order)
-#     y = signal.filtfilt(b, a, data)
-#     return y
-
-# def butter_lowpass(cutoff, fs, order):
-#     nyq = 0.5 * fs
-#     normal_cutoff = cutoff / nyq
-#     b, a = butter(order, normal_cutoff, btype='low', analog=False)
-#     return b, a
-
-# def butter_lowpass_filter(data, cutoff, fs, order):
-#     b, a = butter_lowpass(cutoff, fs, order=order)
-#     y = lfilter(b, a, data)
-#     return y
-
 def write_to_file(ecg_plot, rhythm_name, index):
     if not os.path.exists("./processed_data/"+rhythm_name):
         os.makedirs("./processed_data/"+rhythm_name)
@@ -41,8 +23,6 @@ def write_to_file(ecg_plot, rhythm_name, index):
     cutoff = 100
     order = 6
     fs = 100000.0
-    #ecg_plot_filtered = butter_highpass_filter(ecg_plot, cutoff, fs, order)
-    #ecg_plot_filtered = butter_lowpass_filter(ecg_plot_filtered, 10000, fs, order)
     ecg_plot_filtered = ecg_plot
 
     for value in ecg_plot_filtered:

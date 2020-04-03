@@ -1,3 +1,7 @@
+"""
+File which uses a fully connected deep neural network to classify ECG signals (or feature extracted data) into classes of heart condition
+"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import tensorflow as tf
@@ -19,15 +23,27 @@ import itertools
 from plot_confusion_matrix import plot_confusion_matrix
 
 class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-#class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NSR', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-#class_names = ['AFIB', 'AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'SUDDEN_BRADY', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-#class_names = ['AFIB', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
-#class_names = ['AFIB', 'NOISE', 'NSR']
-#class_names = ['AFIB', 'NSR']
 mode = "ECG" #or FEATURE
 
+#Function which normalizes the ECG signal
+def normalize(ecg_signal, filename):
+    max_value = max(ecg_signal)
+    min_value = min(ecg_signal)
+
+    range_values = max_value - min_value
+
+    if range_values == 0:
+        #print(max_value)
+        #print(min_value)
+        print(filename)
+
+    if range_values == 0:
+        return ecg_signal
+
+    return [(x - min_value)/range_values for x in ecg_signal]
+
+#Function which reads the data from each file in directory and splits into data/labels
 def read_data(filename):
-    
     data = []
     labels = []
     for file in os.listdir(filename):
@@ -37,7 +53,9 @@ def read_data(filename):
         label_text = ""
         for i,line in enumerate(f):
             line = line.replace("\n","")
+            #Function supports two modes - raw signal classification and feature extracted classification. This is raw ECG
             if mode == "ECG":
+                #The ECG signal is stored on line 1 separated by spaces, split data and save
                 if i < 1:
                     line_segments = line.split()
                     for i,item in enumerate(line_segments):
@@ -45,12 +63,15 @@ def read_data(filename):
 
                     for item in line_segments:
                         found_data.append(item)
+                #Second line is the label
                 else:
                     label_text = line
                     #if label_text != "OTHER":
                     index = class_names.index(line)
                     label = index
+            #Function supports two modes - raw signal classification and feature extracted classification. This is feature extraction
             elif mode == "FEATURE":
+                #features stored in first 10 lines
                 if i < 10: #this number might be wrong! Check!
                     line_segments = line.split()
                     for i,item in enumerate(line_segments):
@@ -59,6 +80,7 @@ def read_data(filename):
 
                     for item in line_segments:
                         found_data.append(item)
+                #final line is the label
                 else:
                     label_text = line
                     #if label_text != "OTHER":
@@ -66,41 +88,46 @@ def read_data(filename):
                     label = index
         f.close()
 
+        #If label exists, add data to the data/labels array
         if label != "":
-            data.append(found_data)
+            normalized_data = normalize(found_data, file)
+            data.append(normalized_data)
             labels.append(label)
     
     return data, labels
 
+#get the training data and labels
 (training_data, training_labels) = read_data("./split_processed_data/network_data_unfiltered/training_set/")
 (validation_data, validation_labels) = read_data("./split_processed_data/network_data_unfiltered/validation_set/")
 
-# for item in validation_data:
-#     training_data.append(item)
-# for item in validation_labels:
-#     training_labels.append(item)
-
+#format the training data into a numpy array of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
 
+#format the validation data into a numpy array of numpy arrays
 validation_data = [np.asarray(item) for item in validation_data]
 validation_data = np.array(validation_data)
 
+#format the training labels into a numpy array
 training_labels = [np.asarray(item) for item in training_labels]
 training_labels = np.array(training_labels)
 
+#format the validation labels into a numpy array
 validation_labels = [np.asarray(item) for item in validation_labels]
 validation_labels = np.array(validation_labels)
 
-#This is the upsampling section
+#Upsample the data to amplify lesser classes
 df = pd.DataFrame(training_data)
 df['label'] = training_labels
 
+#Find the class with the maximum number of samples
 max_label = df['label'].value_counts().idxmax()
 max_number = df['label'].value_counts()[max_label]
 
+#Create dataframe to store oversampled data, and set initially to the largest class
 df_oversampled = df[df['label']==max_label]
 
+#for each lesser class, upsample to match size of largest class and append to oversampled dataframe
 for value in range(df['label'].nunique()):
     if value != max_label:
         df_class = df[df['label']==value]
@@ -108,48 +135,35 @@ for value in range(df['label'].nunique()):
         df_class_over = pd.DataFrame(df_class_over)
         df_oversampled = pd.concat([df_oversampled, df_class_over])
 
+#Split oversampled dataframe into training data and labels
 training_labels = df_oversampled['label'].tolist()
 training_labels = np.array(training_labels)
 
 training_data = df_oversampled.drop(columns='label').to_numpy()
-#training_labels = to_categorical(training_labels)   
 #Aaaaand we're done upsampling! Hooray!
 
-# model = keras.Sequential([
-#     #keras.layers.Dense(6, activation=tf.nn.sigmoid),
-#     #keras.layers.Dense(12, activation=tf.nn.sigmoid),
-#     keras.layers.Dense(32, activation=tf.nn.relu),
-#     keras.layers.Dense(32, activation=tf.nn.relu),
-#     #keras.layers.Dense(32, activation=tf.nn.relu),   
-#     keras.layers.Dense(len(class_names), activation
-#     =tf.nn.softmax)
-# ])
-
-#opt = SGD(lr=0.1, momentum=0.9, decay=0.01)
-#rms = keras.optimizers.RMSprop(learning_rate=0.1, rho=0.9)
-
+#Function which creates the model and returns it
 def baseline_model():
+    #Create model
     model = keras.Sequential()
     model.add(Dropout(0.2))
-
     model.add(keras.layers.Dense(256, input_dim=14, activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
 
+    #Add dense layers
     for i in range(15):
         model.add(keras.layers.Dense(256, activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
         #model.add(Dropout(0.2))
     model.add(keras.layers.Dense(len(class_names), activation=tf.nn.softmax))
 
+    #add optimizer and compile the model
     adam = keras.optimizers.Adam(learning_rate=0.001)
     model.compile(optimizer="adagrad", loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
     return model
 
-# estimator = KerasClassifier(build_fn=baseline_model, epochs=10, batch_size=100, verbose=1)
-# kfold = KFold(n_splits=10, shuffle=True)
-# results = cross_val_score(estimator, training_data, training_labels, cv=kfold)
-# print("Baseline: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
-
 model = baseline_model()
+
+#train the model with the training data and labels
 model.fit(training_data, training_labels, epochs=100)
 
 print("Model Summary")
@@ -159,16 +173,15 @@ print(model.summary())
 predicted_labels = model.predict(validation_data)
 # show the inputs and predicted outputs
 
-#validation_encoded = to_categorical(validation_labels)  
-
 predicted_encoded = np.argmax(predicted_labels, axis=1)
 
+#Create a confusion matrix and display
 matrix = confusion_matrix(validation_labels, predicted_encoded, normalize='all')
-#disp = plot_confusion_matrix(model, validation_labels, predicted_encoded,display_labels=class_names)
 plot_confusion_matrix(matrix, classes=class_names, normalize=True, title="Confusion Matrix (fully connected)")
 
 plt.figure()
 
+#Sort the predictions into correctly and incorrectly identified to find the accuracy of each class
 tested = 0
 correct = 0
 correct_predictions = [0]*len(class_names)
@@ -180,8 +193,6 @@ for i in range(len(validation_data)):
     predicted = np.where(predicted_labels[i] == np.amax(predicted_labels[i]))
     predicted_value = predicted[0][0]
 
-    #print("i = "+str(i)+" Label = "+str(validation_labels[i]) + ", Predicted = "+str(predicted_value))
-
     tested = tested + 1
     if validation_labels[i] == predicted_value:
         correct = correct + 1
@@ -190,10 +201,9 @@ for i in range(len(validation_data)):
         incorrect_predictions[validation_labels[i]] = incorrect_predictions[validation_labels[i]] + 1
         incorrectly_identified.append([validation_data[i],i])
 
+#Print, format and plot results
 accuracy = correct/tested
 print("Accuracy = "+str(accuracy))
-print("Correct matrix = "+str(correct_predictions))
-print("Incorrect matrix = "+str(incorrect_predictions))
 
 accuracy_of_predictions = [0]*len(class_names)
 for i,item in enumerate(correct_predictions):
@@ -213,7 +223,6 @@ class_names.append("TOTAL")
 test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 print("Test accuracy: "+str(test_acc))
 
-#print("Accuracy of predictions = "+str(accuracy_of_predictions))
 plt.bar(class_names, accuracy_of_predictions)
 plt.xticks(class_names, fontsize=7, rotation=30)
 x1,x2,y1,y2 = plt.axis()

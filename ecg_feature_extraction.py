@@ -1,4 +1,8 @@
 
+"""
+File which extracts the ECG features returns the results
+"""
+
 import matplotlib.pyplot as plt 
 import numpy as np
 from scipy.signal import freqz

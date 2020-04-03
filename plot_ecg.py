@@ -1,4 +1,8 @@
 
+"""
+File used for visualising the ECG signal, plots and continues
+"""
+
 import matplotlib.pyplot as plt 
 import numpy as np
 import scipy
@@ -7,7 +11,8 @@ from scipy.io.wavfile import write
 import matplotlib.pyplot as plt
 import numpy as np   
 from numpy import fft
-import os 
+import os
+import scipy.fftpack
 
 LENGTH = 400
 
@@ -56,28 +61,33 @@ LENGTH = 400
 # print("Invalid ecgs: "+str(len(really_not_valid_ecgs)))
 # print("Split ecgs: "+str(split_ecgs))
 
-for path, subdirs, files in os.walk("./split_processed_data/"):
-    for name in files:
-        file_path = os.path.join(path, name)
-        f = open(file_path, "r")
-        ecg = np.fromfile(f, dtype=np.int16)
-        plt.plot(ecg)
-        plt.title(name)
-        plt.show()
+# for path, subdirs, files in os.walk("./split_processed_data/"):
+#     for name in files:
+#         file_path = os.path.join(path, name)
+#         f = open(file_path, "r")
+#         ecg = np.fromfile(f, dtype=np.int16)
+#         plt.plot(ecg)
+#         plt.title(name)
+#         plt.show()
 
-file_string = "./split_processed_data/NSR/ecg_3305.ecg"
+file_string = "./split_processed_data/AFIB_AFL/ecg_5.ecg"
+#file_string = "./raw_ecg_data/0b32a14870df10b3429dfa6c360b3a50_0001.ecg"
 f = open(file_string, "r")
 #a = np.fromfile(f, dtype=np.uint16)
 normal2 = np.fromfile(f, dtype=np.int16)
 #normal2 = normal2[:LENGTH]
 
 #plt.plot(afib)
+print(len(normal2))
 plt.plot(normal2)
-plt.title("ecg_1628 - NORMAL")
+plt.title("ecg_5 - AFIB")
+
 # fourier_transform = fft.fft(normal2)
+# print(fourier_transform[:50])
 
 # plt.figure()
 # plt.plot(fourier_transform)
+# plt.title("Fourier Transform")
 
 #plt.plot(afib2)
 #plt.plot(normal2)

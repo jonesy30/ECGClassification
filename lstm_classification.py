@@ -1,3 +1,7 @@
+"""
+Initial experiment with LSTMs, keeping file for archiving purposes
+"""
+
 import random
 import os
 from glob import glob

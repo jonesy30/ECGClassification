@@ -152,7 +152,11 @@ batch_size = 100
 
 #Build and fit the model
 model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
-model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,verbose=verbose)
+history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,validation_split=0.1,verbose=verbose)
+#history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,verbose=verbose)
+
+print("History Keys")
+print(history.history.keys())
 
 print("Model Summary")
 print(model.summary())
@@ -170,6 +174,23 @@ actual_encoded = np.argmax(validation_labels, axis=1)
 matrix = confusion_matrix(actual_encoded, predicted_encoded, normalize='all')
 plot_confusion_matrix(matrix, classes=class_names, normalize=True, title="Confusion Matrix (CNN)")
 
+plt.figure()
+
+#plot accuracy for loss
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('Model Accuracy (CNN)')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.figure()
+# summarize history for loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model Loss (CNN)')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
 plt.figure()
 
 tested = 0

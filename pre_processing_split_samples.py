@@ -13,8 +13,10 @@ from scipy.io.wavfile import write
 import matplotlib.pyplot as plt
 import numpy as np    
 from scipy.signal import butter, lfilter, freqz 
+from recategorise_classes import recategorise_classes
 
 global_file_counter = 0
+destination_filename = "./split_processed_data/"
 
 def butter_highpass(cutoff, fs, order=5):
     nyq = 0.5 * fs
@@ -39,8 +41,8 @@ def butter_lowpass_filter(data, cutoff, fs, order):
     return y
 
 def write_to_file(ecg_plot, rhythm_name, global_file_counter):
-    if not os.path.exists("./split_processed_data/"+rhythm_name):
-        os.makedirs("./split_processed_data/"+rhythm_name)
+    if not os.path.exists(destination_filename+rhythm_name):
+        os.makedirs(destination_filename+rhythm_name)
 
     if len(ecg_plot) != 0:
         #f= open("./split_processed_data/"+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
@@ -65,7 +67,7 @@ def write_to_file(ecg_plot, rhythm_name, global_file_counter):
                 if(len(set(new_ecg))==1):
                     print("All elements in list are same "+rhythm_name)
                 else:
-                    f= open("./split_processed_data/"+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
+                    f= open(destination_filename+rhythm_name+"/ecg_"+str(global_file_counter)+".ecg","wb")
 
                     for i,value_int in enumerate(new_ecg):
                       
@@ -161,5 +163,7 @@ for ecg_index,label in enumerate(labels):
                 ecg_subsection = this_ecg_plot[int(start_onset):int(this_offset)]
 
                 global_file_counter = write_to_file(ecg_subsection, ecg_label, global_file_counter)
+
+recategorise_classes(destination_filename)
 
 print("Complete!")

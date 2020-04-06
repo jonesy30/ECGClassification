@@ -164,7 +164,11 @@ def baseline_model():
 model = baseline_model()
 
 #train the model with the training data and labels
-model.fit(training_data, training_labels, epochs=100)
+history = model.fit(training_data, training_labels, validation_split=0.1, epochs=100)
+#history = model.fit(training_data, training_labels, epochs=100)
+
+print("History Keys")
+print(history.history.keys())
 
 print("Model Summary")
 print(model.summary())
@@ -179,6 +183,23 @@ predicted_encoded = np.argmax(predicted_labels, axis=1)
 matrix = confusion_matrix(validation_labels, predicted_encoded, normalize='all')
 plot_confusion_matrix(matrix, classes=class_names, normalize=True, title="Confusion Matrix (fully connected)")
 
+plt.figure()
+
+#plot accuracy for loss
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('Model Accuracy (fully connected)')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.figure()
+# summarize history for loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model Loss (fully connected)')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
 plt.figure()
 
 #Sort the predictions into correctly and incorrectly identified to find the accuracy of each class

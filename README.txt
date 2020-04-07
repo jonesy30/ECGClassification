@@ -52,3 +52,6 @@ Original paper:
 
 Hannun, A. Y., Rajpurkar, P., Haghpanahi, M. & Tyson, G. H., n.d. Cardiologist-Level Arrhythmia Detection and Classification in Ambulatory Electrocardiograms Using a Deep Neural Network. [Online] 
 Available at: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6784839/pdf/nihms-1051795.pdf
+
+MIT-BIH Dataset:
+https://www.physionet.org/content/mitdb/1.0.0/

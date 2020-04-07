@@ -22,7 +22,7 @@ from sklearn.metrics import confusion_matrix
 import itertools
 from plot_confusion_matrix import plot_confusion_matrix
 
-class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
+class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 mode = "ECG" #or FEATURE
 
 #Function which normalizes the ECG signal

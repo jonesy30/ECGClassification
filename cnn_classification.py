@@ -16,7 +16,7 @@ from sklearn.metrics import confusion_matrix
 import itertools
 from plot_confusion_matrix import plot_confusion_matrix
 
-class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'VT', 'WENCKEBACH']
+class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 
 #Function which normalizes the ECG signal
 def normalize(ecg_signal, filename):
@@ -147,12 +147,12 @@ model.add(keras.layers.Dense(len(class_names), activation='softmax'))
 
 #MAGIC NUMBERS
 verbose = 1
-epochs = 20
+epochs = 500
 batch_size = 100
 
 #Build and fit the model
 model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
-history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,validation_split=0.1,verbose=verbose)
+history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,validation_split=0.25,verbose=verbose)
 #history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,verbose=verbose)
 
 print("History Keys")

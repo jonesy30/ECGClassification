@@ -16,7 +16,8 @@ from sklearn.metrics import confusion_matrix
 import itertools
 from plot_confusion_matrix import plot_confusion_matrix
 
-class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
+#class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
+class_names = ['A','E','j','L','N','P','R','V']
 
 #Function which normalizes the ECG signal
 def normalize(ecg_signal, filename):
@@ -74,8 +75,11 @@ def read_data(foldername):
     return data, labels
 
 #Read the training and validation data and labels and store in arrays
-(training_data, training_labels) = read_data("./split_processed_data/network_data_unfiltered/training_set/")
-(validation_data, validation_labels) = read_data("./split_processed_data/network_data_unfiltered/validation_set/")
+#(training_data, training_labels) = read_data("./split_processed_data/network_data_unfiltered/training_set/")
+#(validation_data, validation_labels) = read_data("./split_processed_data/network_data_unfiltered/validation_set/")
+
+(training_data, training_labels) = read_data("./mit_bih_processed_data/network_data/training_set/")
+(validation_data, validation_labels) = read_data("./mit_bih_processed_data/network_data/validation_set/")
 
 #Turn each training data array into numpy arrays of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
@@ -125,9 +129,11 @@ training_labels = to_categorical(training_labels)
 validation_data = validation_data[:, :, np.newaxis]
 validation_labels = to_categorical(validation_labels)
 
+input_size = 1300 #400 for other dataset
+
 #Build the intial model
 model = keras.Sequential([
-    keras.layers.InputLayer(input_shape=[400,1])
+    keras.layers.InputLayer(input_shape=[1300,1])
     #keras.layers.Lambda(lambda v: tf.cast(tf.spectral.fft(tf.cast(v,dtype=tf.complex64)),tf.float32))
     #Dropout(0.2)
     #keras.layers.Conv1D(kernel_size=10, filters=128, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
@@ -147,7 +153,7 @@ model.add(keras.layers.Dense(len(class_names), activation='softmax'))
 
 #MAGIC NUMBERS
 verbose = 1
-epochs = 500
+epochs = 20
 batch_size = 100
 
 #Build and fit the model

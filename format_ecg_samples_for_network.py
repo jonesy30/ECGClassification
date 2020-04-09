@@ -11,13 +11,23 @@ import numpy as np
 from noise_reduction import noise_reduce
 from numpy import fft
 
-base_filename = "./network_data_unfiltered"
+#destination_folder = "./network_data_unfiltered"
+#base_folder = "./split_processed_data"
+destination_folder = "./network_data"
+base_folder = "./mit_bih_processed_data"
+binary_file = 0
 
-def read_ecg_data(filename):
+def read_ecg_data(filename, binary_file=1):
     f = open(filename,"r")
-    ecg_plot = np.fromfile(f, dtype=np.int16)
-
-    ecg = ecg_plot.tolist()
+    
+    if binary_file == 1:
+        ecg_plot = np.fromfile(f, dtype=np.int16)
+        ecg = ecg_plot.tolist()
+    else:
+        ecg_plot = f.read()
+        ecg_plot = ecg_plot.strip()
+        ecg = ecg_plot.split(" ")
+        ecg = [int(n) for n in ecg]
     #print(ecg[0])
 
     #if list(ecg_plot).count(list(ecg_plot)[0]) == len(list(ecg_plot)):
@@ -29,25 +39,25 @@ def read_ecg_data(filename):
     if ecg.count(ecg[0]) == len(ecg):
         print("All elements in list are same "+filename)
 
-    return ecg_plot
+    return ecg
 
 #Function which sets up the training and validation folders in the current directory
 def setup_files():
-    if not os.path.exists(base_filename):
-        os.makedirs(base_filename)
-    if os.path.exists(base_filename+"/validation_set"):
-        shutil.rmtree(base_filename+"/validation_set")
-    os.makedirs(base_filename+"/validation_set")
-    if os.path.exists(base_filename+"/training_set"):
-        shutil.rmtree(base_filename+"/training_set")
-    os.makedirs(base_filename+"/training_set")
+    if not os.path.exists(destination_folder):
+        os.makedirs(destination_folder)
+    if os.path.exists(destination_folder+"/validation_set"):
+        shutil.rmtree(destination_folder+"/validation_set")
+    os.makedirs(destination_folder+"/validation_set")
+    if os.path.exists(destination_folder+"/training_set"):
+        shutil.rmtree(destination_folder+"/training_set")
+    os.makedirs(destination_folder+"/training_set")
 
 #Function which writes the ECG signal and label to training and validation sets
 def write_to_file(data, label, filename, validation_set):
     if filename in validation_set:
-        f = open(base_filename+"/validation_set/"+filename+".txt","w")
+        f = open(destination_folder+"/validation_set/"+filename+".txt","w")
     else:
-        f = open(base_filename+"/training_set/"+filename+".txt","w")
+        f = open(destination_folder+"/training_set/"+filename+".txt","w")
     write_string = ""
     for value in data:
         write_string = write_string + str(value) + " "
@@ -58,7 +68,7 @@ def write_to_file(data, label, filename, validation_set):
 
     f.close()
 
-os.chdir("./split_processed_data")
+os.chdir(base_folder)
 subfolders = [f.name for f in os.scandir('.') if f.is_dir() ] 
 
 data_labels = []
@@ -69,10 +79,11 @@ ecg_plot_lengths = []
 #Label is the foldername - associate this with the ECG
 for folder in subfolders:
     if not folder.startswith("network_data"):
+        print("Folder "+str(folder))
         for root, dirs, files in os.walk(folder, topdown=False):
             for name in files:
                 filename = str(os.path.join(root, name))
-                ecg = read_ecg_data(filename)
+                ecg = read_ecg_data(filename,binary_file=binary_file)
                 #filtered_ecg = noise_reduce(ecg,filename)
                 
                 ecg_plot.append(ecg)

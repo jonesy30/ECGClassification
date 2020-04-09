@@ -55,3 +55,23 @@ Available at: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6784839/pdf/nihms-105
 
 MIT-BIH Dataset:
 https://www.physionet.org/content/mitdb/1.0.0/
+
+Classes:
+
+N		Normal beat (displayed as "·" by the PhysioBank ATM, LightWAVE, pschart, and psfd)
+L		Left bundle branch block beat
+R		Right bundle branch block beat
+B		Bundle branch block beat (unspecified)
+A		Atrial premature beat
+a		Aberrated atrial premature beat
+J		Nodal (junctional) premature beat
+S		Supraventricular premature or ectopic beat (atrial or nodal)
+V		Premature ventricular contraction
+r		R-on-T premature ventricular contraction
+F		Fusion of ventricular and normal beat (not included)
+e		Atrial escape beat
+j		Nodal (junctional) escape beat
+n		Supraventricular escape beat (atrial or nodal)
+E		Ventricular escape beat
+/ (P)   Paced beat - changed to P for network processing (since I can't have / as a directory name)
+f		Fusion of paced and normal beat (not included)

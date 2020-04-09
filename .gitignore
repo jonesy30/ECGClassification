@@ -107,3 +107,4 @@ venv.bak/
 /raw_ecg_data
 /mit_bih
 /mit_bih_processed_data
+/mit_bih_normal

@@ -22,8 +22,11 @@ from sklearn.metrics import confusion_matrix
 import itertools
 from plot_confusion_matrix import plot_confusion_matrix
 
-class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
+#class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 mode = "ECG" #or FEATURE
+
+class_names = ['A','E','j','L','N','P','R','V']
+labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
 
 #Function which normalizes the ECG signal
 def normalize(ecg_signal, filename):
@@ -97,8 +100,8 @@ def read_data(filename):
     return data, labels
 
 #get the training data and labels
-(training_data, training_labels) = read_data("./split_processed_data/network_data_unfiltered/training_set/")
-(validation_data, validation_labels) = read_data("./split_processed_data/network_data_unfiltered/validation_set/")
+(training_data, training_labels) = read_data("./mit_bih_processed_data/network_data/training_set/")
+(validation_data, validation_labels) = read_data("./mit_bih_processed_data/network_data/validation_set/")
 
 #format the training data into a numpy array of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
@@ -181,13 +184,17 @@ predicted_encoded = np.argmax(predicted_labels, axis=1)
 
 #Create a confusion matrix and display
 matrix = confusion_matrix(validation_labels, predicted_encoded, normalize='all')
-plot_confusion_matrix(matrix, classes=class_names, normalize=True, title="Confusion Matrix (fully connected)")
+plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix (fully connected)")
 
 plt.figure()
 
-#plot accuracy for loss
-plt.plot(history.history['acc'])
-plt.plot(history.history['val_acc'])
+#plot accuracy for accuracy
+if 'accuracy' in history.history.keys():
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+elif 'acc' in history.history.keys():
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
 plt.title('Model Accuracy (fully connected)')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')

@@ -18,6 +18,9 @@ from plot_confusion_matrix import plot_confusion_matrix
 
 #class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 class_names = ['A','E','j','L','N','P','R','V']
+labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
+
+label_names = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','P':'Paced'}
 
 #Function which normalizes the ECG signal
 def normalize(ecg_signal, filename):
@@ -158,7 +161,7 @@ batch_size = 100
 
 #Build and fit the model
 model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
-history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,validation_split=0.25,verbose=verbose)
+history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,validation_split=0.1,verbose=verbose)
 #history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,verbose=verbose)
 
 print("History Keys")
@@ -178,13 +181,19 @@ actual_encoded = np.argmax(validation_labels, axis=1)
 
 #Plot the confusion matrix of the expected and predicted classes
 matrix = confusion_matrix(actual_encoded, predicted_encoded, normalize='all')
-plot_confusion_matrix(matrix, classes=class_names, normalize=True, title="Confusion Matrix (CNN)")
+plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix (CNN)")
 
 plt.figure()
 
 #plot accuracy for loss
-plt.plot(history.history['acc'])
-plt.plot(history.history['val_acc'])
+
+if 'accuracy' in history.history.keys():
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+elif 'acc' in history.history.keys():
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+
 plt.title('Model Accuracy (CNN)')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')

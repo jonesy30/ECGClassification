@@ -86,6 +86,9 @@ def process_files():
     ecg_files = []
     write_counter = 0
     max_length = 1300
+    current_max = 0
+    biggest_file = 0
+    biggest_file_class = ""
     total_lengths = set()
 
     for file in glob.glob("mit_bih/*.atr"):
@@ -105,8 +108,11 @@ def process_files():
 
         for sig_beat in complete_beats:
             signal, beat_label = sig_beat
-            if len(signal) > max_length:
-                max_length = len(signal)
+            if len(signal) > current_max:
+                #max_length = len(signal)
+                current_max = len(signal)
+                biggest_file = write_counter
+                biggest_file_class = beat_label
             if beat_label in beat_dict:
                 if beat_label in beat_replacement:
                     beat_label = beat_replacement.get(beat_label)
@@ -114,28 +120,40 @@ def process_files():
                 signal = np.pad(signal, (0, max_length - len(signal)), 'constant')
                 total_lengths.add(len(signal))
 
-                write_to_file(signal, beat_label, write_counter)
+                #write_to_file(signal, beat_label, write_counter)
                 write_counter += 1
-        print("Max = "+str(max_length))
+        print("Max = "+str(current_max))
+        print("Max file = "+str(biggest_file))
+        print("Max file class = "+str(biggest_file_class))
         print("All lengths = "+str(total_lengths))
 
     print("Complete!")
     print("Files Written = "+str(write_counter))
 
 if __name__ == "__main__":
-    process_files()
+    #process_files()
     #plot_ecg(232)
 
-    # f = "./mit_bih_processed_data/P/ecg_4134.txt"
+    f = "./mit_bih_processed_data/N/ecg_75808.txt"
 
-    # file = open(f, "r")
-    # ecg_string = file.read()
-    # ecg_string = ecg_string.strip()
-    # ecg = ecg_string.split(" ")
+    file = open(f, "r")
+    ecg_string = file.read()
+    ecg_string = ecg_string.strip()
+    ecg = ecg_string.split(" ")
 
-    # ecg = [int(n) for n in ecg]
+    ecg = [int(n) for n in ecg]
 
-    # print(len(ecg))
+    print(len(ecg))
 
-    # plt.plot(ecg)
-    # plt.show()
+    plt.xlabel("Seconds")
+    plt.ylabel("Microvolts")
+    plt.title("ECG 75808 (class normal)")
+
+    ax = plt.axes()
+
+    axlabels = np.arange(0,3.6,0.514)
+    axlabels = [round(x,1) for x in axlabels]
+    ax.set_xticklabels(axlabels)
+
+    plt.plot(ecg)
+    plt.show()

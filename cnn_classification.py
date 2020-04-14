@@ -15,6 +15,7 @@ import pandas as pd
 from sklearn.metrics import confusion_matrix
 import itertools
 from plot_confusion_matrix import plot_confusion_matrix
+import time
 
 #class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 class_names = ['A','E','j','L','N','P','R','V']
@@ -80,6 +81,8 @@ def read_data(foldername):
 #Read the training and validation data and labels and store in arrays
 #(training_data, training_labels) = read_data("./split_processed_data/network_data_unfiltered/training_set/")
 #(validation_data, validation_labels) = read_data("./split_processed_data/network_data_unfiltered/validation_set/")
+
+start_time = time.time()
 
 (training_data, training_labels) = read_data("./mit_bih_processed_data/network_data/training_set/")
 (validation_data, validation_labels) = read_data("./mit_bih_processed_data/network_data/validation_set/")
@@ -261,6 +264,8 @@ for i,item in enumerate(class_names):
 class_names.append("TOTAL")
 
 print("Test accuracy: "+str(test_acc))
+end_time = time.time()
+print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
 
 for item in incorrectly_identified:
     [data, index] = item

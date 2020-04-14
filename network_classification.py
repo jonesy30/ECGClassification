@@ -21,6 +21,7 @@ from tensorflow.keras.utils import to_categorical
 from sklearn.metrics import confusion_matrix
 import itertools
 from plot_confusion_matrix import plot_confusion_matrix
+import time
 
 #class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 mode = "ECG" #or FEATURE
@@ -99,6 +100,8 @@ def read_data(filename):
     
     return data, labels
 
+start_time = time.time()
+
 #get the training data and labels
 (training_data, training_labels) = read_data("./mit_bih_processed_data/network_data/training_set/")
 (validation_data, validation_labels) = read_data("./mit_bih_processed_data/network_data/validation_set/")
@@ -166,8 +169,10 @@ def baseline_model():
 
 model = baseline_model()
 
+epochs = 100
+
 #train the model with the training data and labels
-history = model.fit(training_data, training_labels, validation_split=0.1, epochs=100)
+history = model.fit(training_data, training_labels, validation_split=0.1, epochs=epochs)
 #history = model.fit(training_data, training_labels, epochs=100)
 
 print("History Keys")
@@ -250,6 +255,8 @@ class_names.append("TOTAL")
 
 test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 print("Test accuracy: "+str(test_acc))
+end_time = time.time()
+print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
 
 plt.bar(class_names, accuracy_of_predictions)
 plt.xticks(class_names, fontsize=7, rotation=30)

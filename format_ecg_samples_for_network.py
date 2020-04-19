@@ -14,7 +14,7 @@ from numpy import fft
 #destination_folder = "./network_data_unfiltered"
 #base_folder = "./split_processed_data"
 destination_folder = "./network_data"
-base_folder = "./mit_bih_processed_data"
+base_folder = "./mit_bih_processed_data_two_leads"
 binary_file = 0
 
 def read_ecg_data(filename, binary_file=1):

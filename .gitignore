@@ -105,6 +105,4 @@ venv.bak/
 
 /split_processed_data
 /raw_ecg_data
-/mit_bih
-/mit_bih_processed_data
-/mit_bih_normal
+/mit_bih*

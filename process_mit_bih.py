@@ -25,10 +25,10 @@ beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTI
 # f		Fusion of paced and normal beat (not included)
 
 def write_to_file(ecg_plot, rhythm_name, index):
-    if not os.path.exists("./mit_bih_processed_data/"+rhythm_name):
-        os.makedirs("./mit_bih_processed_data/"+rhythm_name)
+    if not os.path.exists("./mit_bih_processed_data_two_leads/"+rhythm_name):
+        os.makedirs("./mit_bih_processed_data_two_leads/"+rhythm_name)
 
-    f= open("./mit_bih_processed_data/"+rhythm_name+"/ecg_"+str(index)+".txt","w")
+    f= open("./mit_bih_processed_data_two_leads/"+rhythm_name+"/ecg_"+str(index)+".txt","w")
 
     for value in ecg_plot:
         value_int = int(round(value*1000))
@@ -38,10 +38,13 @@ def write_to_file(ecg_plot, rhythm_name, index):
     f.close()
 
 def get_full_ecg(filenumber):
+    max_length = 1300
+    
     annotation = wfdb.rdann('mit_bih/'+str(filenumber), 'atr', sampto=650000)
     ecg_signal, _ = wfdb.srdsamp('mit_bih/'+str(filenumber))
 
-    ecg_signal = ecg_signal[:,0]
+    ecg_lead_1 = ecg_signal[:,0]
+    ecg_lead_2 = ecg_signal[:,1]
 
     unique_labels_df = annotation.get_contained_labels(inplace=False)
     annotation_indices = annotation.sample
@@ -64,7 +67,14 @@ def get_full_ecg(filenumber):
             start_recording = ((current_beat-beat_before)//2) + beat_before
             end_recording = ((beat_after-current_beat)//2)+current_beat
 
-            complete_beat = ecg_signal[start_recording:end_recording]
+            complete_beat_1 = ecg_lead_1[start_recording:end_recording]
+            complete_beat_1 = np.pad(complete_beat_1, (0, max_length - len(complete_beat_1)), 'constant')
+
+            complete_beat_2 = ecg_lead_2[start_recording:end_recording]
+            complete_beat_2 = np.pad(complete_beat_2, (0, max_length - len(complete_beat_2)), 'constant')
+
+            complete_beat = np.append(complete_beat_1, complete_beat_2)
+
             #print(complete_beat)
             beat_label = annotation_classes[index]
 
@@ -117,10 +127,10 @@ def process_files():
                 if beat_label in beat_replacement:
                     beat_label = beat_replacement.get(beat_label)
 
-                signal = np.pad(signal, (0, max_length - len(signal)), 'constant')
+                #signal = np.pad(signal, (0, max_length - len(signal)), 'constant')
                 total_lengths.add(len(signal))
 
-                #write_to_file(signal, beat_label, write_counter)
+                write_to_file(signal, beat_label, write_counter)
                 write_counter += 1
         print("Max = "+str(current_max))
         print("Max file = "+str(biggest_file))
@@ -131,29 +141,30 @@ def process_files():
     print("Files Written = "+str(write_counter))
 
 if __name__ == "__main__":
-    #process_files()
+    process_files()
     #plot_ecg(232)
 
-    f = "./mit_bih_processed_data/N/ecg_75808.txt"
+    # f = "./mit_bih_processed_data/N/ecg_82473.txt"
 
-    file = open(f, "r")
-    ecg_string = file.read()
-    ecg_string = ecg_string.strip()
-    ecg = ecg_string.split(" ")
+    # file = open(f, "r")
+    # ecg_string = file.read()
+    # ecg_string = ecg_string.strip()
+    # ecg = ecg_string.split(" ")
 
-    ecg = [int(n) for n in ecg]
+    # ecg = [int(n) for n in ecg]
+    # ecg = ecg[:360]
 
-    print(len(ecg))
+    # print(len(ecg))
 
-    plt.xlabel("Seconds")
-    plt.ylabel("Microvolts")
-    plt.title("ECG 75808 (class normal)")
+    # plt.xlabel("Seconds")
+    # plt.ylabel("Microvolts")
+    # plt.title("ECG 82473 (class normal)")
 
-    ax = plt.axes()
+    # ax = plt.axes()
 
-    axlabels = np.arange(0,3.6,0.514)
-    axlabels = [round(x,1) for x in axlabels]
-    ax.set_xticklabels(axlabels)
+    # axlabels = np.arange(0,1,0.124)
+    # axlabels = [round(x,1) for x in axlabels]
+    # ax.set_xticklabels(axlabels)
 
-    plt.plot(ecg)
-    plt.show()
+    # plt.plot(ecg)
+    # plt.show()

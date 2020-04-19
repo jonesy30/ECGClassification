@@ -159,7 +159,7 @@ model.add(keras.layers.Dense(len(class_names), activation='softmax'))
 
 #MAGIC NUMBERS
 verbose = 1
-epochs = 20
+epochs = 100
 batch_size = 100
 
 #Build and fit the model
@@ -181,12 +181,6 @@ predicted_labels = model.predict(validation_data)
 
 predicted_encoded = np.argmax(predicted_labels, axis=1)
 actual_encoded = np.argmax(validation_labels, axis=1)
-
-#Plot the confusion matrix of the expected and predicted classes
-matrix = confusion_matrix(actual_encoded, predicted_encoded, normalize='all')
-plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix (CNN)")
-
-plt.figure()
 
 #plot accuracy for loss
 
@@ -269,6 +263,12 @@ print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
 
 for item in incorrectly_identified:
     [data, index] = item
+
+#Plot the confusion matrix of the expected and predicted classes
+matrix = confusion_matrix(actual_encoded, predicted_encoded, normalize='all')
+plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix (CNN), Accuracy = "+str(round(test_acc*100,2))+"%")
+
+plt.figure()
 
 #Plot prediction accuracy percentages
 plt.bar(class_names, accuracy_of_predictions)

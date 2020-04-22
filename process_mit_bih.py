@@ -24,11 +24,22 @@ beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTI
 # /		Paced beat
 # f		Fusion of paced and normal beat (not included)
 
-def write_to_file(ecg_plot, rhythm_name, index):
-    if not os.path.exists("./mit_bih_processed_data_two_leads/"+rhythm_name):
-        os.makedirs("./mit_bih_processed_data_two_leads/"+rhythm_name)
+leave_one_out_validation = 1
 
-    f= open("./mit_bih_processed_data_two_leads/"+rhythm_name+"/ecg_"+str(index)+".txt","w")
+def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0):
+    
+    if validation_flag == 1:
+        if not os.path.exists("./mit_bih_processed_data_two_leads/network_validation/"+rhythm_name):
+            os.makedirs("./mit_bih_processed_data_two_leads/network_validation/"+rhythm_name)
+
+        f= open("./mit_bih_processed_data_two_leads/network_validation/"+rhythm_name+"/ecg_"+str(index)+".txt","w")
+        print("Validation set - "+rhythm_name)
+
+    else:
+        if not os.path.exists("./mit_bih_processed_data_two_leads/"+rhythm_name):
+            os.makedirs("./mit_bih_processed_data_two_leads/"+rhythm_name)
+
+        f= open("./mit_bih_processed_data_two_leads/"+rhythm_name+"/ecg_"+str(index)+".txt","w")
 
     for value in ecg_plot:
         value_int = int(round(value*1000))
@@ -130,7 +141,10 @@ def process_files():
                 #signal = np.pad(signal, (0, max_length - len(signal)), 'constant')
                 total_lengths.add(len(signal))
 
-                write_to_file(signal, beat_label, write_counter)
+                if (leave_one_out_validation == 1) and (("104" in file) or ("208" in file)) :
+                    write_to_file(signal, beat_label, write_counter, validation_flag=1)
+                else:
+                    write_to_file(signal, beat_label, write_counter)
                 write_counter += 1
         print("Max = "+str(current_max))
         print("Max file = "+str(biggest_file))

@@ -16,6 +16,7 @@ from numpy import fft
 destination_folder = "./network_data"
 base_folder = "./mit_bih_processed_data_two_leads"
 binary_file = 0
+leave_one_out_validation = 1
 
 def read_ecg_data(filename, binary_file=1):
     f = open(filename,"r")
@@ -68,67 +69,110 @@ def write_to_file(data, label, filename, validation_set):
 
     f.close()
 
-os.chdir(base_folder)
-subfolders = [f.name for f in os.scandir('.') if f.is_dir() ] 
+def write_validation_to_file(data, label, filename):
+    f = open(destination_folder+"/validation_set/"+filename+".txt","w")
+    
+    write_string = ""
+    for value in data:
+        write_string = write_string + str(value) + " "
+    write_string = write_string + "\n"
+    f.write(write_string)
+    write_string = label + "\n"
+    f.write(write_string)
 
-data_labels = []
-ecg_plot = []
-ecg_plot_lengths = []
+    f.close()
 
-#Get all the ECGs in each folder (not including network data - this has already been processed)
-#Label is the foldername - associate this with the ECG
-for folder in subfolders:
-    if not folder.startswith("network_data"):
-        print("Folder "+str(folder))
-        for root, dirs, files in os.walk(folder, topdown=False):
-            for name in files:
-                filename = str(os.path.join(root, name))
-                ecg = read_ecg_data(filename,binary_file=binary_file)
-                #filtered_ecg = noise_reduce(ecg,filename)
-                
-                ecg_plot.append(ecg)
-                #ecg_plot.append(filtered_ecg)
-                #fourier_transform = fft.fft(ecg)
-                
-                #ecg_plot.append(fourier_transform)
-                data_labels.append(["",folder])
+def split_samples(base_folder):
+    print(os.getcwd())
+    os.chdir(base_folder)
+    subfolders = [f.name for f in os.scandir('.') if f.is_dir() ] 
 
-for plot in ecg_plot:
-    ecg_plot_lengths.append(len(plot))
+    data_labels = []
+    ecg_plot = []
+    ecg_plot_lengths = []
 
-#Find the maximum length of the ECGs (just a check to make sure I'm using the right folder!)
-max_length = max(ecg_plot_lengths)
-for i,plot in enumerate(ecg_plot):
-    new_plot = np.array(plot).tolist()
-    while len(new_plot) < max_length:
-        new_plot.append(0)
-    ecg_plot[i] = new_plot
+    #Get all the ECGs in each folder (not including network data - this has already been processed)
+    #Label is the foldername - associate this with the ECG
+    for folder in subfolders:
+        if not folder.startswith("network_"):
+            print("Folder "+str(folder))
+            for root, dirs, files in os.walk(folder, topdown=False):
+                for name in files:
+                    filename = str(os.path.join(root, name))
+                    ecg = read_ecg_data(filename,binary_file=binary_file)
+                    #filtered_ecg = noise_reduce(ecg,filename)
+                    
+                    ecg_plot.append(ecg)
+                    #ecg_plot.append(filtered_ecg)
+                    #fourier_transform = fft.fft(ecg)
+                    
+                    #ecg_plot.append(fourier_transform)
+                    data_labels.append(["",folder])
 
-ecg_plot_lengths = []
-for plot in ecg_plot:
-    ecg_plot_lengths.append(len(plot))
+    for plot in ecg_plot:
+        ecg_plot_lengths.append(len(plot))
 
-ecg_plot_lengths = []
-for plot in ecg_plot:
-    ecg_plot_lengths.append(len(plot))
+    #Find the maximum length of the ECGs (just a check to make sure I'm using the right folder!)
+    max_length = max(ecg_plot_lengths)
+    for i,plot in enumerate(ecg_plot):
+        new_plot = np.array(plot).tolist()
+        while len(new_plot) < max_length:
+            new_plot.append(0)
+        ecg_plot[i] = new_plot
 
-for i,plot in enumerate(ecg_plot):
-    data_labels[i][0] = plot
+    ecg_plot_lengths = []
+    for plot in ecg_plot:
+        ecg_plot_lengths.append(len(plot))
 
-#Print the max and min lengths - these should be the same
-print("Max ECG length = "+str(max(ecg_plot_lengths)))
-print("Min ECG length = "+str(min(ecg_plot_lengths)))
+    ecg_plot_lengths = []
+    for plot in ecg_plot:
+        ecg_plot_lengths.append(len(plot))
+
+    for i,plot in enumerate(ecg_plot):
+        data_labels[i][0] = plot
+
+    #Print the max and min lengths - these should be the same
+    print("Max ECG length = "+str(max(ecg_plot_lengths)))
+    print("Min ECG length = "+str(min(ecg_plot_lengths)))
+
+    return ecg_plot, data_labels
+
+ecg_plot, data_labels = split_samples(base_folder)
 
 #Randomly split the dataset into training and validation set (25% validation currently set)
-validation_set = random.sample(range(0,len(ecg_plot)), len(ecg_plot)//4)
-for i,item in enumerate(validation_set):
-    validation_set[i] = "ecg_"+str(item)
+if leave_one_out_validation == 0:
+    validation_set = random.sample(range(0,len(ecg_plot)), len(ecg_plot)//4)
+    for i,item in enumerate(validation_set):
+        validation_set[i] = "ecg_"+str(item)
 
-#Write processed data to file
-setup_files()
-for i,item in enumerate(data_labels):
-    data = item[0]
-    label = item[1]
-    filename = "ecg_"+str(i)
+    #Write processed data to file
+    setup_files()
+    for i,item in enumerate(data_labels):
+        data = item[0]
+        label = item[1]
+        filename = "ecg_"+str(i)
 
-    write_to_file(data, label, filename, validation_set)
+        write_to_file(data, label, filename, validation_set)
+
+else:
+    validation_set = {}
+
+    #Write processed data to file
+    setup_files()
+    for i,item in enumerate(data_labels):
+        data = item[0]
+        label = item[1]
+        filename = "ecg_"+str(i)
+
+        write_to_file(data, label, filename, validation_set)
+    
+    ecg_plot, data_labels = split_samples("./network_validation/")
+    os.chdir("..")
+    
+    #Write processed data to file
+    for i,item in enumerate(data_labels):
+        data = item[0]
+        label = item[1]
+        filename = "ecg_"+str(i)
+
+        write_validation_to_file(data, label, filename)

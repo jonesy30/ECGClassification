@@ -187,12 +187,6 @@ predicted_labels = model.predict(validation_data)
 
 predicted_encoded = np.argmax(predicted_labels, axis=1)
 
-#Create a confusion matrix and display
-matrix = confusion_matrix(validation_labels, predicted_encoded, normalize='all')
-plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix (fully connected)")
-
-plt.figure()
-
 #plot accuracy for accuracy
 if 'accuracy' in history.history.keys():
     plt.plot(history.history['accuracy'])
@@ -257,6 +251,12 @@ test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 print("Test accuracy: "+str(test_acc))
 end_time = time.time()
 print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
+
+#Create a confusion matrix and display
+matrix = confusion_matrix(validation_labels, predicted_encoded, normalize='all')
+plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix (fully connected), Accuracy = "+str(round(test_acc*100,2))+"%")
+
+plt.figure()
 
 plt.bar(class_names, accuracy_of_predictions)
 plt.xticks(class_names, fontsize=7, rotation=30)

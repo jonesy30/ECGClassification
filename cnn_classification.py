@@ -17,6 +17,7 @@ import itertools
 from plot_confusion_matrix import plot_confusion_matrix
 import time
 from classification_report import plot_classification_report
+from visualise_incorrect_predictions import save_incorrect_predictions
 
 #class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 class_names = ['A','E','j','L','N','P','R','V']
@@ -42,11 +43,12 @@ def normalize(ecg_signal, filename):
     return [(x - min_value)/range_values for x in ecg_signal]
 
 #Function which reads ECG data and labels from each file in folder
-def read_data(foldername):
+def read_data(foldername,save_unnormalised=False):
     
     data = []
     labels = []
-    
+    unnormalised = []
+
     #for each file in corresponding folder
     for file in os.listdir(foldername):
         f = open(str(foldername+file), "r")
@@ -73,10 +75,14 @@ def read_data(foldername):
 
         #if label exists, store in trainng validation data
         if label != "":
+            unnormalised.append(found_data)
             normalized_data = normalize(found_data, file)
             data.append(normalized_data)
             labels.append(label)
     
+    if save_unnormalised == True:
+        return [data, unnormalised], labels
+
     return data, labels
 
 #Read the training and validation data and labels and store in arrays
@@ -85,8 +91,10 @@ def read_data(foldername):
 
 start_time = time.time()
 
-(training_data, training_labels) = read_data("./mit_bih_processed_data_two_leads_subset/network_data/training_set/")
-(validation_data, validation_labels) = read_data("./mit_bih_processed_data_two_leads_subset/network_data/validation_set/")
+base_filename = "./mit_bih_processed_data_two_leads/"
+
+(training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
+([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
 
 #Turn each training data array into numpy arrays of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
@@ -160,7 +168,7 @@ model.add(keras.layers.Dense(len(class_names), activation='softmax'))
 
 #MAGIC NUMBERS
 verbose = 1
-epochs = 1
+epochs = 50
 batch_size = 100
 
 #Build and fit the model
@@ -178,8 +186,8 @@ print("Evaluating....")
 
 test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 predicted_labels = model.predict(validation_data)
-# show the inputs and predicted outputs
 
+# show the inputs and predicted outputs
 predicted_encoded = np.argmax(predicted_labels, axis=1)
 actual_encoded = np.argmax(validation_labels, axis=1)
 
@@ -212,7 +220,9 @@ correct_predictions = [0]*len(class_names)
 incorrect_predictions = [0]*len(class_names)
 
 predicted_values = []
-incorrectly_identified = []
+incorrectly_identified_ecgs = []
+incorrectly_identified_predicted_labels = []
+incorrectly_identified_true_labels = []
 
 #Format the predictions into incorrect and correct predictions
 for i in range(len(validation_data)):
@@ -228,7 +238,12 @@ for i in range(len(validation_data)):
         correct_predictions[actual] = correct_predictions[actual] + 1
     else:
         incorrect_predictions[actual] = incorrect_predictions[actual] + 1
-        incorrectly_identified.append([validation_data[i],i])
+        
+        incorrectly_identified_ecgs.append(unnormalised_validation[i])
+        incorrectly_identified_predicted_labels.append(class_names[predicted_value])
+        incorrectly_identified_true_labels.append(class_names[actual])
+
+save_incorrect_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, base_filename)
 
 #Print evaluations
 accuracy = correct/tested
@@ -261,9 +276,6 @@ class_names.append("TOTAL")
 print("Test accuracy: "+str(test_acc))
 end_time = time.time()
 print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
-
-for item in incorrectly_identified:
-    [data, index] = item
 
 #Plot the confusion matrix of the expected and predicted classes
 matrix = confusion_matrix(actual_encoded, predicted_encoded, normalize='all')

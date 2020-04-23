@@ -14,7 +14,7 @@ from numpy import fft
 #destination_folder = "./network_data_unfiltered"
 #base_folder = "./split_processed_data"
 destination_folder = "./network_data"
-base_folder = "./mit_bih_processed_data_two_leads"
+base_folder = "./mit_bih_processed_data_two_leads_subset"
 binary_file = 0
 leave_one_out_validation = 1
 

@@ -84,8 +84,8 @@ def read_data(foldername):
 
 start_time = time.time()
 
-(training_data, training_labels) = read_data("./mit_bih_processed_data/network_data/training_set/")
-(validation_data, validation_labels) = read_data("./mit_bih_processed_data/network_data/validation_set/")
+(training_data, training_labels) = read_data("./mit_bih_processed_data_two_leads/network_data/training_set/")
+(validation_data, validation_labels) = read_data("./mit_bih_processed_data_two_leads/network_data/validation_set/")
 
 #Turn each training data array into numpy arrays of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
@@ -139,11 +139,8 @@ input_size = 1300 #400 for other dataset
 
 #Build the intial model
 model = keras.Sequential([
-    keras.layers.InputLayer(input_shape=[1300,1])
-    #keras.layers.Lambda(lambda v: tf.cast(tf.spectral.fft(tf.cast(v,dtype=tf.complex64)),tf.float32))
-    #Dropout(0.2)
-    #keras.layers.Conv1D(kernel_size=10, filters=128, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
-    #keras.layers.AveragePooling1D(pool_size=2, strides=1,padding="same")
+    keras.layers.InputLayer(input_shape=[2600,1])
+    #keras.layers.InputLayer(input_shape=[1300,1])
 ])
 
 #Add extra labels
@@ -159,7 +156,7 @@ model.add(keras.layers.Dense(len(class_names), activation='softmax'))
 
 #MAGIC NUMBERS
 verbose = 1
-epochs = 100
+epochs = 50
 batch_size = 100
 
 #Build and fit the model

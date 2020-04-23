@@ -70,7 +70,7 @@ LENGTH = 400
 #         plt.title(name)
 #         plt.show()
 
-file_string = "./split_processed_data/AFIB_AFL/ecg_5.ecg"
+file_string = "./mit_bih_processed_data_two_leads_subset/network_incorrect_results/R/pred_j_14.txt"
 #file_string = "./raw_ecg_data/0b32a14870df10b3429dfa6c360b3a50_0001.ecg"
 f = open(file_string, "r")
 #a = np.fromfile(f, dtype=np.uint16)

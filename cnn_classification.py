@@ -16,6 +16,8 @@ from sklearn.metrics import confusion_matrix
 import itertools
 from plot_confusion_matrix import plot_confusion_matrix
 import time
+from classification_report import plot_classification_report
+from visualise_incorrect_predictions import save_incorrect_predictions
 
 #class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 class_names = ['A','E','j','L','N','P','R','V']
@@ -41,11 +43,12 @@ def normalize(ecg_signal, filename):
     return [(x - min_value)/range_values for x in ecg_signal]
 
 #Function which reads ECG data and labels from each file in folder
-def read_data(foldername):
+def read_data(foldername,save_unnormalised=False):
     
     data = []
     labels = []
-    
+    unnormalised = []
+
     #for each file in corresponding folder
     for file in os.listdir(foldername):
         f = open(str(foldername+file), "r")
@@ -72,10 +75,14 @@ def read_data(foldername):
 
         #if label exists, store in trainng validation data
         if label != "":
+            unnormalised.append(found_data)
             normalized_data = normalize(found_data, file)
             data.append(normalized_data)
             labels.append(label)
     
+    if save_unnormalised == True:
+        return [data, unnormalised], labels
+
     return data, labels
 
 #Read the training and validation data and labels and store in arrays
@@ -84,8 +91,10 @@ def read_data(foldername):
 
 start_time = time.time()
 
-(training_data, training_labels) = read_data("./mit_bih_processed_data_two_leads/network_data/training_set/")
-(validation_data, validation_labels) = read_data("./mit_bih_processed_data_two_leads/network_data/validation_set/")
+base_filename = "./mit_bih_processed_data_two_leads/"
+
+(training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
+([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
 
 #Turn each training data array into numpy arrays of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
@@ -135,12 +144,20 @@ training_labels = to_categorical(training_labels)
 validation_data = validation_data[:, :, np.newaxis]
 validation_labels = to_categorical(validation_labels)
 
-input_size = 1300 #400 for other dataset
+input_size = 2600 #400 for other dataset
 
 #Build the intial model
 model = keras.Sequential([
+<<<<<<< HEAD
     keras.layers.InputLayer(input_shape=[2600,1])
     #keras.layers.InputLayer(input_shape=[1300,1])
+=======
+    keras.layers.InputLayer(input_shape=[input_size,1])
+    #keras.layers.Lambda(lambda v: tf.cast(tf.spectral.fft(tf.cast(v,dtype=tf.complex64)),tf.float32))
+    #Dropout(0.2)
+    #keras.layers.Conv1D(kernel_size=10, filters=128, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
+    #keras.layers.AveragePooling1D(pool_size=2, strides=1,padding="same")
+>>>>>>> 4f5289ede12cba09af666d6f926a495a0f38aef3
 ])
 
 #Add extra labels
@@ -174,8 +191,8 @@ print("Evaluating....")
 
 test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 predicted_labels = model.predict(validation_data)
-# show the inputs and predicted outputs
 
+# show the inputs and predicted outputs
 predicted_encoded = np.argmax(predicted_labels, axis=1)
 actual_encoded = np.argmax(validation_labels, axis=1)
 
@@ -208,7 +225,9 @@ correct_predictions = [0]*len(class_names)
 incorrect_predictions = [0]*len(class_names)
 
 predicted_values = []
-incorrectly_identified = []
+incorrectly_identified_ecgs = []
+incorrectly_identified_predicted_labels = []
+incorrectly_identified_true_labels = []
 
 #Format the predictions into incorrect and correct predictions
 for i in range(len(validation_data)):
@@ -224,7 +243,12 @@ for i in range(len(validation_data)):
         correct_predictions[actual] = correct_predictions[actual] + 1
     else:
         incorrect_predictions[actual] = incorrect_predictions[actual] + 1
-        incorrectly_identified.append([validation_data[i],i])
+        
+        incorrectly_identified_ecgs.append(unnormalised_validation[i])
+        incorrectly_identified_predicted_labels.append(class_names[predicted_value])
+        incorrectly_identified_true_labels.append(class_names[actual])
+
+save_incorrect_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, base_filename)
 
 #Print evaluations
 accuracy = correct/tested
@@ -258,12 +282,11 @@ print("Test accuracy: "+str(test_acc))
 end_time = time.time()
 print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
 
-for item in incorrectly_identified:
-    [data, index] = item
-
 #Plot the confusion matrix of the expected and predicted classes
 matrix = confusion_matrix(actual_encoded, predicted_encoded, normalize='all')
 plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix (CNN), Accuracy = "+str(round(test_acc*100,2))+"%")
+
+plot_classification_report(actual_encoded, predicted_encoded, labels, show_plot=False)
 
 plt.figure()
 

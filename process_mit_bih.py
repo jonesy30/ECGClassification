@@ -157,30 +157,31 @@ def process_files():
     print("Files Written = "+str(write_counter))
 
 if __name__ == "__main__":
-    process_files()
+    #process_files()
     #plot_ecg(232)
 
+    f = "./mit_bih_processed_data_two_leads_subset/network_incorrect_results/R/pred_L_10.txt"
     # f = "./mit_bih_processed_data/N/ecg_82473.txt"
 
-    # file = open(f, "r")
-    # ecg_string = file.read()
-    # ecg_string = ecg_string.strip()
-    # ecg = ecg_string.split(" ")
+    file = open(f, "r")
+    ecg_string = file.read()
+    ecg_string = ecg_string.strip()
+    ecg = ecg_string.split(" ")
 
-    # ecg = [int(n) for n in ecg]
-    # ecg = ecg[:360]
+    ecg = [int(n) for n in ecg]
+    ecg = ecg[:360]
 
-    # print(len(ecg))
+    print(len(ecg))
 
-    # plt.xlabel("Seconds")
-    # plt.ylabel("Microvolts")
-    # plt.title("ECG 82473 (class normal)")
+    plt.xlabel("Seconds")
+    plt.ylabel("Microvolts")
+    plt.title("ECG 82473 (class normal)")
 
-    # ax = plt.axes()
+    ax = plt.axes()
 
-    # axlabels = np.arange(0,1,0.124)
-    # axlabels = [round(x,1) for x in axlabels]
-    # ax.set_xticklabels(axlabels)
+    axlabels = np.arange(0,1,0.124)
+    axlabels = [round(x,1) for x in axlabels]
+    ax.set_xticklabels(axlabels)
 
-    # plt.plot(ecg)
-    # plt.show()
+    plt.plot(ecg)
+    plt.show()

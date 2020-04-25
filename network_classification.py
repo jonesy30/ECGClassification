@@ -22,6 +22,8 @@ from sklearn.metrics import confusion_matrix
 import itertools
 from plot_confusion_matrix import plot_confusion_matrix
 import time
+from classification_report import plot_classification_report
+from visualise_incorrect_predictions import save_incorrect_predictions
 
 #class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 mode = "ECG" #or FEATURE
@@ -47,64 +49,56 @@ def normalize(ecg_signal, filename):
     return [(x - min_value)/range_values for x in ecg_signal]
 
 #Function which reads the data from each file in directory and splits into data/labels
-def read_data(filename):
+#Function which reads ECG data and labels from each file in folder
+def read_data(foldername,save_unnormalised=False):
+    
     data = []
     labels = []
-    for file in os.listdir(filename):
-        f = open(str(filename+file), "r")
+    unnormalised = []
+
+    #for each file in corresponding folder
+    for file in os.listdir(foldername):
+        f = open(str(foldername+file), "r")
         found_data = []
         label = ""
         label_text = ""
         for i,line in enumerate(f):
             line = line.replace("\n","")
-            #Function supports two modes - raw signal classification and feature extracted classification. This is raw ECG
-            if mode == "ECG":
-                #The ECG signal is stored on line 1 separated by spaces, split data and save
-                if i < 1:
-                    line_segments = line.split()
-                    for i,item in enumerate(line_segments):
-                        line_segments[i] = float(item)
+            #ECG signal stored in first line separated by spaces
+            if i < 1:
+                line_segments = line.split()
+                for i,item in enumerate(line_segments):
+                    line_segments[i] = float(item)
 
-                    for item in line_segments:
-                        found_data.append(item)
-                #Second line is the label
-                else:
-                    label_text = line
-                    #if label_text != "OTHER":
-                    index = class_names.index(line)
-                    label = index
-            #Function supports two modes - raw signal classification and feature extracted classification. This is feature extraction
-            elif mode == "FEATURE":
-                #features stored in first 10 lines
-                if i < 10: #this number might be wrong! Check!
-                    line_segments = line.split()
-                    for i,item in enumerate(line_segments):
-                        line_segments[i] = float(item)
-                        found_data.append(float(line))
-
-                    for item in line_segments:
-                        found_data.append(item)
-                #final line is the label
-                else:
-                    label_text = line
-                    #if label_text != "OTHER":
-                    index = class_names.index(line)
-                    label = index
+                for item in line_segments:
+                    found_data.append(item)
+            #label stored on second line
+            else:
+                label_text = line
+                #if label_text != "OTHER":
+                index = class_names.index(line)
+                label = index
         f.close()
 
-        #If label exists, add data to the data/labels array
+        #if label exists, store in trainng validation data
         if label != "":
+            unnormalised.append(found_data)
             normalized_data = normalize(found_data, file)
             data.append(normalized_data)
             labels.append(label)
     
+    if save_unnormalised == True:
+        return [data, unnormalised], labels
+
     return data, labels
 
 start_time = time.time()
 
 #get the training data and labels
-(training_data, training_labels) = read_data("./mit_bih_processed_data_two_leads/network_data/training_set/")
-(validation_data, validation_labels) = read_data("./mit_bih_processed_data_two_leads/network_data/validation_set/")
+
+base_filename = "./mit_bih_processed_data_two_leads_subset/"
+(training_data, training_labels) = read_data(base_filename+"network_data/validation_set/")
+([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
 
 #format the training data into a numpy array of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
@@ -153,7 +147,7 @@ def baseline_model():
     #Create model
     model = keras.Sequential()
     model.add(Dropout(0.2))
-    model.add(keras.layers.Dense(256, input_dim=14, activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
+    model.add(keras.layers.Dense(256, input_shape = (2600,1), activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
 
     #Add dense layers
     for i in range(15):
@@ -169,7 +163,7 @@ def baseline_model():
 
 model = baseline_model()
 
-epochs = 70
+epochs = 1
 
 #train the model with the training data and labels
 history = model.fit(training_data, training_labels, validation_split=0.1, epochs=epochs)
@@ -182,6 +176,7 @@ print("Model Summary")
 print(model.summary())
 
 # make a prediction
+test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 predicted_labels = model.predict(validation_data)
 # show the inputs and predicted outputs
 
@@ -214,23 +209,44 @@ correct = 0
 correct_predictions = [0]*len(class_names)
 incorrect_predictions = [0]*len(class_names)
 
-incorrectly_identified = []
+predicted_values = []
+incorrectly_identified_ecgs = []
+incorrectly_identified_predicted_labels = []
+incorrectly_identified_true_labels = []
 
+#Format the predictions into incorrect and correct predictions
 for i in range(len(validation_data)):
     predicted = np.where(predicted_labels[i] == np.amax(predicted_labels[i]))
     predicted_value = predicted[0][0]
+    predicted_values.append(predicted_value)
+
+    actual = validation_labels[i]
 
     tested = tested + 1
-    if validation_labels[i] == predicted_value:
+    if actual == predicted_value:
         correct = correct + 1
-        correct_predictions[validation_labels[i]] = correct_predictions[validation_labels[i]] + 1
+        correct_predictions[actual] = correct_predictions[actual] + 1
     else:
-        incorrect_predictions[validation_labels[i]] = incorrect_predictions[validation_labels[i]] + 1
-        incorrectly_identified.append([validation_data[i],i])
+        incorrect_predictions[actual] = incorrect_predictions[actual] + 1
+        
+        incorrectly_identified_ecgs.append(unnormalised_validation[i])
+        incorrectly_identified_predicted_labels.append(class_names[predicted_value])
+        incorrectly_identified_true_labels.append(class_names[actual])
 
-#Print, format and plot results
+save_incorrect_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, base_filename+"/fully_connected/")
+
+#Print evaluations
 accuracy = correct/tested
 print("Accuracy = "+str(accuracy))
+print("Correct matrix = ")
+print(correct_predictions)
+print("Incorrect matrix = ")
+print(incorrect_predictions)
+
+predicted_values = pd.DataFrame(predicted_values,columns=['predicted'])
+print("Predicted Value Count Check")
+print(predicted_values['predicted'].value_counts())
+print()
 
 accuracy_of_predictions = [0]*len(class_names)
 for i,item in enumerate(correct_predictions):
@@ -247,22 +263,35 @@ for i,item in enumerate(class_names):
     class_names[i] = class_names[i] + " ("+str(total)+")"
 class_names.append("TOTAL")
 
-test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 print("Test accuracy: "+str(test_acc))
 end_time = time.time()
 print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
 
-#Create a confusion matrix and display
+print(predicted_labels[:5])
+print(validation_labels[:5])
+
+predicted_encoded = np.argmax(predicted_labels, axis=1)
+#actual_encoded = np.argmax(validation_labels, axis=1)
+
+#Plot the confusion matrix of the expected and predicted classes
 matrix = confusion_matrix(validation_labels, predicted_encoded, normalize='all')
 plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix (fully connected), Accuracy = "+str(round(test_acc*100,2))+"%")
 
+plot_classification_report(validation_labels, predicted_encoded, labels, show_plot=False)
+
 plt.figure()
 
+if not os.path.exists("./saved_model/"):
+    os.makedirs("./saved_model/")
+
+model.save("./saved_model/fully_connected_model")
+
+#Plot prediction accuracy percentages
 plt.bar(class_names, accuracy_of_predictions)
 plt.xticks(class_names, fontsize=7, rotation=30)
+plt.title("Fully Connected\nOverall Accuracy = "+str(round(test_acc*100,2))+"%")
 x1,x2,y1,y2 = plt.axis()
 plt.axis((x1,x2,0,100))
-plt.title("Fully Connected NN\nOverall Accuracy = "+str(round(test_acc*100,2))+"%")
 plt.ylabel("Accuracy of predictions (%)")
 plt.xlabel("Condition")
 plt.show()

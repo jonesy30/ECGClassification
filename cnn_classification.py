@@ -247,7 +247,7 @@ for i in range(len(validation_data)):
         incorrectly_identified_predicted_labels.append(class_names[predicted_value])
         incorrectly_identified_true_labels.append(class_names[actual])
 
-save_incorrect_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, base_filename)
+save_incorrect_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, base_filename+"/cnn/")
 
 #Print evaluations
 accuracy = correct/tested

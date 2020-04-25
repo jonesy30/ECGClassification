@@ -68,7 +68,7 @@ def read_data(foldername,save_unnormalised=False):
     return data, labels
 
 
-new_model = tf.keras.models.load_model('saved_model/cnn_model')
+new_model = tf.keras.models.load_model('saved_model/fully_connected_model')
 
 print(new_model.summary())
 
@@ -76,6 +76,8 @@ base_filename = "./mit_bih_processed_data_two_leads_subset/"
 #base_filename + "network_data/validation_set/"
 #"hannun_validation_data/""
 (validation_data, validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=False)
+#print(len(validation_data))
+#validation_data = np.reshape(validation_data,(2600,len(validation_data)))
 
 validation_data = [np.asarray(item) for item in validation_data]
 validation_data = np.array(validation_data)

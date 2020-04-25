@@ -5,7 +5,6 @@ File which formats the ECG into training and testing datasets
 from ecg_feature_extraction import feature_extract_ecg
 import random
 import os
-from glob import glob
 import shutil
 import numpy as np
 from noise_reduction import noise_reduce

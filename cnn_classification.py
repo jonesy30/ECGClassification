@@ -154,13 +154,17 @@ model = keras.Sequential([
     #keras.layers.Conv1D(kernel_size=10, filters=128, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
     #keras.layers.AveragePooling1D(pool_size=2, strides=1,padding="same")
 ])
-
 #Add extra labels
-for i in range(2):
-    model.add(keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'))
-    model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1, padding="same"))
-    model.add(Dropout(0.5))
-    #model.add(keras.layers.UpSampling1D(size=5))
+
+model.add(keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, input_shape=(input_size,1), use_bias=True, kernel_initializer='VarianceScaling'))
+model.add(keras.layers.LeakyReLU(alpha=0.3))
+model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1, padding="same"))
+model.add(Dropout(0.5))
+
+model.add(keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, use_bias=True, kernel_initializer='VarianceScaling'))
+model.add(keras.layers.LeakyReLU(alpha=0.3))
+model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1, padding="same"))
+model.add(Dropout(0.5))
 
 #model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1))
 model.add(keras.layers.Flatten())
@@ -284,6 +288,11 @@ plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion M
 plot_classification_report(actual_encoded, predicted_encoded, labels, show_plot=False)
 
 plt.figure()
+
+if not os.path.exists("./saved_model/"):
+    os.makedirs("./saved_model/")
+
+model.save("./saved_model/cnn_model")
 
 #Plot prediction accuracy percentages
 plt.bar(class_names, accuracy_of_predictions)

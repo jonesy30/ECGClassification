@@ -103,8 +103,8 @@ def read_data(filename):
 start_time = time.time()
 
 #get the training data and labels
-(training_data, training_labels) = read_data("./mit_bih_processed_data/network_data/training_set/")
-(validation_data, validation_labels) = read_data("./mit_bih_processed_data/network_data/validation_set/")
+(training_data, training_labels) = read_data("./mit_bih_processed_data_two_leads/network_data/training_set/")
+(validation_data, validation_labels) = read_data("./mit_bih_processed_data_two_leads/network_data/validation_set/")
 
 #format the training data into a numpy array of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
@@ -169,7 +169,7 @@ def baseline_model():
 
 model = baseline_model()
 
-epochs = 100
+epochs = 70
 
 #train the model with the training data and labels
 history = model.fit(training_data, training_labels, validation_split=0.1, epochs=epochs)

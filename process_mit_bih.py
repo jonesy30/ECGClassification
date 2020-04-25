@@ -141,7 +141,9 @@ def process_files():
                 #signal = np.pad(signal, (0, max_length - len(signal)), 'constant')
                 total_lengths.add(len(signal))
 
-                if (leave_one_out_validation == 1) and (("104" in file) or ("208" in file)) :
+                #leave_out_array = ["104","208","113","210","119"]
+                leave_out_array = ["124","200","115","207","228"]
+                if (leave_one_out_validation == 1) and (any(x in file for x in leave_out_array)):
                     write_to_file(signal, beat_label, write_counter, validation_flag=1)
                 else:
                     write_to_file(signal, beat_label, write_counter)

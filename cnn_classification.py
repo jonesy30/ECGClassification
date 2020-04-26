@@ -40,7 +40,9 @@ def normalize(ecg_signal, filename):
     if range_values == 0:
         return ecg_signal
 
-    return [(x - min_value)/range_values for x in ecg_signal]
+    normalised = [(x - min_value)/range_values for x in ecg_signal]
+
+    return [np.float32(a) for a in normalised]
 
 #Function which reads ECG data and labels from each file in folder
 def read_data(foldername,save_unnormalised=False):
@@ -94,23 +96,14 @@ start_time = time.time()
 base_filename = "./mit_bih_processed_data_two_leads/"
 
 (training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
-([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
 
 #Turn each training data array into numpy arrays of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
 
-#Turn each validation data array into numpy arrays of numpy arrays
-validation_data = [np.asarray(item) for item in validation_data]
-validation_data = np.array(validation_data)
-
 #Turn training labels into element arrays of 1x1 element arrays (each containing a label)
 training_labels = [np.asarray(item) for item in training_labels]
 training_labels = np.array(training_labels)
-
-#Turn validation labels into element arrays of 1x1 element arrays (each containing a label)
-validation_labels = [np.asarray(item) for item in validation_labels]
-validation_labels = np.array(validation_labels)
 
 #Upsample the data to amplify lesser classes
 df = pd.DataFrame(training_data)
@@ -139,10 +132,6 @@ training_data = df_oversampled.drop(columns='label').to_numpy()
 #Resize training data to fit CNN input layer and convert labels to one-hot encoding
 training_data = training_data[:, :, np.newaxis]
 training_labels = to_categorical(training_labels)
-
-#Resize validation data to fit CNN input layer and convert labels to one-hot encoding
-validation_data = validation_data[:, :, np.newaxis]
-validation_labels = to_categorical(validation_labels)
 
 input_size = 2600 #400 for other dataset
 
@@ -183,6 +172,25 @@ print("Model Summary")
 print(model.summary())
 
 print("Evaluating....")
+
+#Clear training data - we don't need this any more
+del training_data
+del training_labels
+
+([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
+print("Finished reading validation file")
+
+#Turn each validation data array into numpy arrays of numpy arrays
+validation_data = [np.asarray(item) for item in validation_data]
+validation_data = np.array(validation_data)
+
+#Turn validation labels into element arrays of 1x1 element arrays (each containing a label)
+validation_labels = [np.asarray(item) for item in validation_labels]
+validation_labels = np.array(validation_labels)
+
+#Resize validation data to fit CNN input layer and convert labels to one-hot encoding
+validation_data = validation_data[:, :, np.newaxis]
+validation_labels = to_categorical(validation_labels)
 
 test_loss, test_acc = model.evaluate(validation_data, validation_labels)
 predicted_labels = model.predict(validation_data)

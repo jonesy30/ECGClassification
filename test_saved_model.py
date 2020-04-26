@@ -68,7 +68,7 @@ def read_data(foldername,save_unnormalised=False):
     return data, labels
 
 
-new_model = tf.keras.models.load_model('saved_model/fully_connected_model')
+new_model = tf.keras.models.load_model('saved_models\\fully_connected\\fully_connected_model')
 
 print(new_model.summary())
 

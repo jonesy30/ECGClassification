@@ -93,7 +93,7 @@ def read_data(foldername,save_unnormalised=False):
 
 start_time = time.time()
 
-base_filename = "./mit_bih_processed_data_two_leads/"
+base_filename = "./mit_bih_processed_data_two_leads_subset/"
 
 (training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
 
@@ -297,10 +297,15 @@ plot_classification_report(actual_encoded, predicted_encoded, labels, show_plot=
 
 plt.figure()
 
-if not os.path.exists("./saved_model/"):
-    os.makedirs("./saved_model/")
+# tboard_log_dir = os.path.join("logs",NAME)
+# tensorboard = TensorBoard(log_dir = tboard_log_dir)
 
-model.save("./saved_model/cnn_model")
+if not os.path.exists("./saved_models/"):
+    os.makedirs("./saved_models/")
+if not os.path.exists("./saved_models/cnn/"):
+    os.makedirs("./saved_models/cnn/")
+
+model.save(".\\saved_models\\cnn\\cnn_model")
 
 #Plot prediction accuracy percentages
 plt.bar(class_names, accuracy_of_predictions)

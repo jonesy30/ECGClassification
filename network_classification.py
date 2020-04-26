@@ -98,23 +98,14 @@ start_time = time.time()
 
 base_filename = "./mit_bih_processed_data_two_leads_subset/"
 (training_data, training_labels) = read_data(base_filename+"network_data/validation_set/")
-([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
 
 #format the training data into a numpy array of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
 
-#format the validation data into a numpy array of numpy arrays
-validation_data = [np.asarray(item) for item in validation_data]
-validation_data = np.array(validation_data)
-
 #format the training labels into a numpy array
 training_labels = [np.asarray(item) for item in training_labels]
 training_labels = np.array(training_labels)
-
-#format the validation labels into a numpy array
-validation_labels = [np.asarray(item) for item in validation_labels]
-validation_labels = np.array(validation_labels)
 
 #Upsample the data to amplify lesser classes
 df = pd.DataFrame(training_data)
@@ -142,10 +133,12 @@ training_labels = np.array(training_labels)
 training_data = df_oversampled.drop(columns='label').to_numpy()
 #Aaaaand we're done upsampling! Hooray!
 
+input_size = 2600
 #Function which creates the model and returns it
 def baseline_model():
     #Create model
     model = keras.Sequential()
+    keras.layers.InputLayer(input_shape=[input_size,1])
     model.add(Dropout(0.2))
     model.add(keras.layers.Dense(256, input_shape = (2600,1), activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
 
@@ -163,7 +156,7 @@ def baseline_model():
 
 model = baseline_model()
 
-epochs = 1
+epochs = 100
 
 #train the model with the training data and labels
 history = model.fit(training_data, training_labels, validation_split=0.1, epochs=epochs)
@@ -174,6 +167,21 @@ print(history.history.keys())
 
 print("Model Summary")
 print(model.summary())
+
+del training_data
+del training_labels
+
+([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
+
+print("Finished reading validation, evaluating...")
+
+#format the validation data into a numpy array of numpy arrays
+validation_data = [np.asarray(item) for item in validation_data]
+validation_data = np.array(validation_data)
+
+#format the validation labels into a numpy array
+validation_labels = [np.asarray(item) for item in validation_labels]
+validation_labels = np.array(validation_labels)
 
 # make a prediction
 test_loss, test_acc = model.evaluate(validation_data, validation_labels)
@@ -281,10 +289,12 @@ plot_classification_report(validation_labels, predicted_encoded, labels, show_pl
 
 plt.figure()
 
-if not os.path.exists("./saved_model/"):
-    os.makedirs("./saved_model/")
+if not os.path.exists("./saved_models/"):
+    os.makedirs("./saved_models/")
+if not os.path.exists("./saved_models/fully_connected/"):
+    os.makedirs("./saved_models/fully_connected/")
 
-model.save("./saved_model/fully_connected_model")
+model.save(".\\saved_models\\fully_connected\\fully_connected_model")
 
 #Plot prediction accuracy percentages
 plt.bar(class_names, accuracy_of_predictions)

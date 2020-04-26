@@ -134,27 +134,29 @@ training_data = df_oversampled.drop(columns='label').to_numpy()
 #Aaaaand we're done upsampling! Hooray!
 
 input_size = 2600
-#Function which creates the model and returns it
-def baseline_model():
-    #Create model
-    model = keras.Sequential()
-    keras.layers.InputLayer(input_shape=[input_size,1])
-    model.add(Dropout(0.2))
-    model.add(keras.layers.Dense(256, input_shape = (2600,1), activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
+input_shape = training_data[0].shape
 
-    #Add dense layers
-    for i in range(15):
-        model.add(keras.layers.Dense(256, activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
-        #model.add(Dropout(0.2))
-    model.add(keras.layers.Dense(len(class_names), activation=tf.nn.softmax))
+model = keras.Sequential([
+    keras.layers.InputLayer(input_shape=input_shape)
+])
 
-    #add optimizer and compile the model
-    adam = keras.optimizers.Adam(learning_rate=0.001)
-    model.compile(optimizer="adagrad", loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.add(keras.layers.Dense(256, activation=tf.nn.relu, input_shape=input_shape, kernel_constraint=maxnorm(3)))
+model.add(Dropout(0.2))
 
-    return model
+#Add dense layers
+for i in range(15):
+    model.add(keras.layers.Dense(256, activation=tf.nn.relu, kernel_constraint=maxnorm(3)))
+    #model.add(Dropout(0.2))
 
-model = baseline_model()
+model.add(keras.layers.Flatten())
+model.add(keras.layers.Dense(len(class_names), activation=tf.nn.softmax))
+
+#add optimizer and compile the model
+adam = keras.optimizers.Adam(learning_rate=0.001)
+model.compile(optimizer="adagrad", loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+input_shape = training_data[0].shape  
+model.build(input_shape)
 
 epochs = 100
 

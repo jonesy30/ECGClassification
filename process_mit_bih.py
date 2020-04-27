@@ -48,11 +48,11 @@ def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0):
         f.write(to_write)
     f.close()
 
-def get_full_ecg(filenumber):
+def get_full_ecg(filenumber, base_filename="mit_bih/"):
     max_length = 1300
     
-    annotation = wfdb.rdann('mit_bih/'+str(filenumber), 'atr', sampto=650000)
-    ecg_signal, _ = wfdb.srdsamp('mit_bih/'+str(filenumber))
+    annotation = wfdb.rdann(base_filename+str(filenumber), 'atr', sampto=650000)
+    ecg_signal, _ = wfdb.srdsamp(base_filename+str(filenumber))
 
     ecg_lead_1 = ecg_signal[:,0]
     ecg_lead_2 = ecg_signal[:,1]
@@ -94,13 +94,13 @@ def get_full_ecg(filenumber):
     
     return complete_beats
 
-def plot_ecg(filenumber):
+def plot_ecg(filenumber, base_filename="mit_bih/", title="MIT-BIH Arrhythmia Database"):
 
-    record = wfdb.rdsamp('mit_bih/'+str(filenumber), sampto=3000, smoothframes=True)
-    annotation = wfdb.rdann('mit_bih/'+str(filenumber), 'atr', sampto=3000)
+    record = wfdb.rdsamp(base_filename+str(filenumber), sampto=3000, smoothframes=True)
+    annotation = wfdb.rdann(base_filename+str(filenumber), 'atr', sampto=3000)
     #Annotation attributes: record_name, extension, sample (indices), symbol (classes), subtype, chan, num, aux_note, fs, label_store, description, custom_labels, contained_labels
 
-    wfdb.plotrec(record, annotation = annotation, title="Record "+str(filenumber)+" from MIT-BIH Arrhythmia Database", figsize = (10,4), ecggrids = 'all',plotannsym=True)
+    wfdb.plotrec(record, annotation = annotation, title="Record "+str(filenumber)+title, figsize = (10,4), ecggrids = 'all',plotannsym=True)
 
 def process_files():
 
@@ -158,33 +158,35 @@ def process_files():
     print("Files Written = "+str(write_counter))
 
 if __name__ == "__main__":
-    #process_files()
+    process_files()
     #plot_ecg(232)
 
-    for f in glob.glob("./hannun_validation_data/*.txt"):
-        #f = "./hannun_validation_data/ecg_63.txt"
-        # f = "./mit_bih_processed_data/N/ecg_82473.txt"
+    #plot_ecg(16420,base_filename="mit_bih_normal/",title="MIT-BIH Normal Database")
 
-        file = open(f, "r")
-        ecg_string = file.read()
-        ecg_string = ecg_string.replace("\nN",'')
-        ecg_string = ecg_string.strip()
-        ecg = ecg_string.split(" ")
+    # for f in glob.glob("./hannun_validation_data/*.txt"):
+    #     #f = "./hannun_validation_data/ecg_63.txt"
+    #     # f = "./mit_bih_processed_data/N/ecg_82473.txt"
 
-        print(len(ecg))
+    #     file = open(f, "r")
+    #     ecg_string = file.read()
+    #     ecg_string = ecg_string.replace("\nN",'')
+    #     ecg_string = ecg_string.strip()
+    #     ecg = ecg_string.split(" ")
 
-        ecg = [int(n) for n in ecg]
-        ecg = ecg[:1300]
+    #     print(len(ecg))
 
-        plt.xlabel("Seconds")
-        plt.ylabel("Microvolts")
-        plt.title(f)
+    #     ecg = [int(n) for n in ecg]
+    #     ecg = ecg[:1300]
 
-        ax = plt.axes()
+    #     plt.xlabel("Seconds")
+    #     plt.ylabel("Microvolts")
+    #     plt.title(f)
 
-        axlabels = np.arange(0,1,0.124)
-        axlabels = [round(x,1) for x in axlabels]
-        ax.set_xticklabels(axlabels)
+    #     ax = plt.axes()
 
-        plt.plot(ecg)
-        plt.show()
+    #     axlabels = np.arange(0,1,0.124)
+    #     axlabels = [round(x,1) for x in axlabels]
+    #     ax.set_xticklabels(axlabels)
+
+    #     plt.plot(ecg)
+    #     plt.show()

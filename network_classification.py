@@ -24,6 +24,7 @@ from plot_confusion_matrix import plot_confusion_matrix
 import time
 from classification_report import plot_classification_report
 from visualise_incorrect_predictions import save_incorrect_predictions
+from analyse_ml_results import analyse_results
 
 #class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 mode = "ECG" #or FEATURE
@@ -192,104 +193,8 @@ predicted_labels = model.predict(validation_data)
 
 predicted_encoded = np.argmax(predicted_labels, axis=1)
 
-#plot accuracy for accuracy
-if 'accuracy' in history.history.keys():
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
-elif 'acc' in history.history.keys():
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
-plt.title('Model Accuracy (fully connected)')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.figure()
-# summarize history for loss
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('Model Loss (fully connected)')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.figure()
-
-#Sort the predictions into correctly and incorrectly identified to find the accuracy of each class
-tested = 0
-correct = 0
-correct_predictions = [0]*len(class_names)
-incorrect_predictions = [0]*len(class_names)
-
-predicted_values = []
-incorrectly_identified_ecgs = []
-incorrectly_identified_predicted_labels = []
-incorrectly_identified_true_labels = []
-
-#Format the predictions into incorrect and correct predictions
-for i in range(len(validation_data)):
-    predicted = np.where(predicted_labels[i] == np.amax(predicted_labels[i]))
-    predicted_value = predicted[0][0]
-    predicted_values.append(predicted_value)
-
-    actual = validation_labels[i]
-
-    tested = tested + 1
-    if actual == predicted_value:
-        correct = correct + 1
-        correct_predictions[actual] = correct_predictions[actual] + 1
-    else:
-        incorrect_predictions[actual] = incorrect_predictions[actual] + 1
-        
-        incorrectly_identified_ecgs.append(unnormalised_validation[i])
-        incorrectly_identified_predicted_labels.append(class_names[predicted_value])
-        incorrectly_identified_true_labels.append(class_names[actual])
-
-save_incorrect_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, base_filename+"/fully_connected/")
-
-#Print evaluations
-accuracy = correct/tested
-print("Accuracy = "+str(accuracy))
-print("Correct matrix = ")
-print(correct_predictions)
-print("Incorrect matrix = ")
-print(incorrect_predictions)
-
-predicted_values = pd.DataFrame(predicted_values,columns=['predicted'])
-print("Predicted Value Count Check")
-print(predicted_values['predicted'].value_counts())
-print()
-
-accuracy_of_predictions = [0]*len(class_names)
-for i,item in enumerate(correct_predictions):
-    total_labels = correct_predictions[i] + incorrect_predictions[i]
-    if total_labels!=0:
-        accuracy_of_predictions[i] = correct_predictions[i]/total_labels*100
-    else:
-        accuracy_of_predictions[i] = np.nan
-
-accuracy_of_predictions.append(accuracy*100)
-
-for i,item in enumerate(class_names):
-    total = correct_predictions[i] + incorrect_predictions[i]
-    class_names[i] = class_names[i] + " ("+str(total)+")"
-class_names.append("TOTAL")
-
-print("Test accuracy: "+str(test_acc))
 end_time = time.time()
 print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
-
-print(predicted_labels[:5])
-print(validation_labels[:5])
-
-predicted_encoded = np.argmax(predicted_labels, axis=1)
-#actual_encoded = np.argmax(validation_labels, axis=1)
-
-#Plot the confusion matrix of the expected and predicted classes
-matrix = confusion_matrix(validation_labels, predicted_encoded, normalize='all')
-plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix (fully connected), Accuracy = "+str(round(test_acc*100,2))+"%")
-
-plot_classification_report(validation_labels, predicted_encoded, labels, show_plot=False)
-
-plt.figure()
 
 if not os.path.exists("./saved_models/"):
     os.makedirs("./saved_models/")
@@ -298,12 +203,4 @@ if not os.path.exists("./saved_models/fully_connected/"):
 
 model.save(".\\saved_models\\fully_connected\\fully_connected_model")
 
-#Plot prediction accuracy percentages
-plt.bar(class_names, accuracy_of_predictions)
-plt.xticks(class_names, fontsize=7, rotation=30)
-plt.title("Fully Connected\nOverall Accuracy = "+str(round(test_acc*100,2))+"%")
-x1,x2,y1,y2 = plt.axis()
-plt.axis((x1,x2,0,100))
-plt.ylabel("Accuracy of predictions (%)")
-plt.xlabel("Condition")
-plt.show()
+analyse_results(history, validation_data, validation_labels, predicted_labels, "fully_connected", base_filename, unnormalised_validation, test_acc)

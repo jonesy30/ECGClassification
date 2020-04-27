@@ -51,8 +51,11 @@ def read_data(foldername,save_unnormalised=False):
             else:
                 label_text = line
                 #if label_text != "OTHER":
-                index = class_names.index(line)
-                label = index
+                if str(line) not in class_names:
+                    label = ""
+                else:
+                    index = class_names.index(line)
+                    label = index
         f.close()
 
         #if label exists, store in trainng validation data
@@ -67,15 +70,15 @@ def read_data(foldername,save_unnormalised=False):
 
     return data, labels
 
-model_location = 'saved_models\\fully_connected\\fully_connected_model'
+model_location = 'saved_models\\cnn\\cnn_model'
 new_model = tf.keras.models.load_model(model_location)
 
 print(new_model.summary())
 
-base_filename = "./mit_bih_processed_data_two_leads_subset/"
+base_filename = "./external_validation_data/mit_bih_nsr_subset/"
 #base_filename + "network_data/validation_set/"
 #"hannun_validation_data/""
-(validation_data, validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=False)
+(validation_data, validation_labels) = read_data(base_filename,save_unnormalised=False)
 #print(len(validation_data))
 #validation_data = np.reshape(validation_data,(2600,len(validation_data)))
 

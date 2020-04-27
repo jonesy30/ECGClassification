@@ -15,91 +15,123 @@ from keras.layers import LSTM
 from keras.layers.embeddings import Embedding
 from keras.layers import Dropout
 import pandas as pd
+from tensorflow.keras.utils import to_categorical
 
-def read_ecg_data(filename):
-    f = open(filename,"r")
-    ecg_plot = np.fromfile(f, dtype=np.int16)
-    return ecg_plot
+class_names = ['A','E','j','L','N','P','R','V']
 
-os.chdir("./afib_nsr_data")
-subfolders = [f.name for f in os.scandir('.') if f.is_dir() ] 
+def normalize(ecg_signal, filename):
+    max_value = max(ecg_signal)
+    min_value = min(ecg_signal)
 
-data_labels = []
-ecg_plot = []
-ecg_plot_lengths = []
-files = []
-list_of_names = []
-for folder in subfolders:
-    for root, dirs, files in os.walk(folder, topdown=False):
-        for name in files:
-            filename = str(os.path.join(root, name))
-            this_ecg = read_ecg_data(filename)
+    range_values = max_value - min_value
 
-            if len(this_ecg) != 0:
-                min_value = min(this_ecg)
-                if min_value < 0:
-                    new_ecg = [x-(min_value) for x in this_ecg]
+    if range_values == 0:
+        print(max_value)
+        print(min_value)
+        print(filename)
 
-                ecg_plot.append(new_ecg)
-                list_of_names.append(filename)
-                data_labels.append(folder)
+    if range_values == 0:
+        return ecg_signal
 
-for plot in ecg_plot:
-    ecg_plot_lengths.append(len(plot))
+    return [(x - min_value)/range_values for x in ecg_signal]
 
-for i in range(5):
-    max_length = max(ecg_plot_lengths)
-    print("Max length = "+str(max_length))
-    print("Filename = "+str(list_of_names[ecg_plot_lengths.index(max_length)]))
+def read_data(foldername,save_unnormalised=False):
+    
+    data = []
+    labels = []
+    unnormalised = []
 
-    # indexes = [i for i,val in enumerate(ecg_plot_lengths) if val==max_length]
-    # for i in indexes:
-    #     print("Filename = "+str(list_of_names[i]))
-    ecg_plot_lengths.remove(max_length)
+    #for each file in corresponding folder
+    for file in os.listdir(foldername):
+        f = open(str(foldername+file), "r")
+        found_data = []
+        label = ""
+        label_text = ""
+        for i,line in enumerate(f):
+            line = line.replace("\n","")
+            #ECG signal stored in first line separated by spaces
+            if i < 1:
+                line_segments = line.split()
+                for i,item in enumerate(line_segments):
+                    line_segments[i] = float(item)
 
-training_data_labels = []
-count_0 = 0
-count_1 = 0
-for item in data_labels:
-    if item == 'NSR':
-        training_data_labels.append(0)
-        count_0 += 1
-    else:
-        training_data_labels.append(1)
-        count_1 += 1
+                for item in line_segments:
+                    found_data.append(item)
+            #label stored on second line
+            else:
+                label_text = line
+                #if label_text != "OTHER":
+                if str(line) not in class_names:
+                    label = ""
+                else:
+                    index = class_names.index(line)
+                    label = index
+        f.close()
 
-print("Count 0 = "+str(count_0))
-print("Count 1 = "+str(count_1))
+        #if label exists, store in trainng validation data
+        if label != "":
+            unnormalised.append(found_data)
+            normalized_data = normalize(found_data, file)
+            data.append(normalized_data)
+            labels.append(label)
+    
+    if save_unnormalised == True:
+        return [data, unnormalised], labels
 
-train_data, test_data, train_labels, test_labels = train_test_split(ecg_plot, training_data_labels, test_size=0.25, random_state=42)
+    return data, labels
 
-train_data = sequence.pad_sequences(train_data, maxlen=max_length)
-test_data = sequence.pad_sequences(test_data, maxlen=max_length)
+base_filename = "./mit_bih_processed_data_two_leads_subset/network_data/"
+(training_data, training_labels) = read_data(base_filename + "training_set/",save_unnormalised=False)
+(validation_data, validation_labels) = read_data(base_filename + "validation_set/",save_unnormalised=False)
 
-train_data = np.reshape(train_data, (train_data.shape[0], 1, train_data.shape[1]))
-test_data = np.reshape(test_data, (test_data.shape[0], 1, test_data.shape[1]))
+training_data = training_data[:1000]
+training_labels = training_labels[:1000]
 
-df = pd.DataFrame(train_labels)
-print("Training split: "+str(df[0].value_counts()))
-df = pd.DataFrame(test_labels)
-print("Test split: "+str(df[0].value_counts()))
+validation_data = validation_data[:500]
+validation_labels = validation_labels[:500]
+
+#Turn each training data array into numpy arrays of numpy arrays
+training_data = [np.asarray(item) for item in training_data]
+training_data = np.array(training_data)
+
+#Turn training labels into element arrays of 1x1 element arrays (each containing a label)
+training_labels = [np.asarray(item) for item in training_labels]
+training_labels = np.array(training_labels)
+
+#Resize training data to fit CNN input layer and convert labels to one-hot encoding
+training_data = training_data[:, :, np.newaxis]
+training_labels = to_categorical(training_labels,num_classes=len(class_names))
+
+#NOTE: Still to do oversampling
+
+#Turn each validation data array into numpy arrays of numpy arrays
+validation_data = [np.asarray(item) for item in validation_data]
+validation_data = np.array(validation_data)
+
+#Turn validation labels into element arrays of 1x1 element arrays (each containing a label)
+validation_labels = [np.asarray(item) for item in validation_labels]
+validation_labels = np.array(validation_labels)
+
+#Resize validation data to fit CNN input layer and convert labels to one-hot encoding
+validation_data = validation_data[:, :, np.newaxis]
+validation_labels = to_categorical(validation_labels,num_classes=len(class_names))
 
 #embedding_vecor_length = 500
 model = Sequential()
 #model.add(Embedding(200, embedding_vecor_length, input_length=max_length))
-model.add(LSTM(60, return_sequences=True, input_shape=(1, max_length)))
+model.add(LSTM(60, return_sequences=True, input_shape=(2600, 1)))
 model.add(Dropout(0.2))
 model.add(LSTM(60))
 model.add(Dropout(0.2))
-model.add(Dense(1, activation='sigmoid'))
+model.add(Dense(len(class_names), activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-model.fit(train_data, train_labels, epochs=100, batch_size=200)
+model.fit(training_data, training_labels, epochs=1, batch_size=200)
 print(model.summary())
 # Final evaluation of the model
-scores = model.evaluate(test_data, test_labels, verbose=1)
+scores = model.evaluate(validation_data, validation_labels, verbose=1)
 print("Accuracy: %.2f%%" % (scores[1]*100))
 
-predictions = model.predict(test_data)
+predictions = model.predict(validation_data)
 
 one_hot_predictions = []
 for value in predictions:
@@ -108,4 +140,4 @@ for value in predictions:
 df = pd.DataFrame(one_hot_predictions)
 print(df[0].value_counts())
 
-print("F1 Score: "+str(f1_score(test_labels, one_hot_predictions)))
+print("F1 Score: "+str(f1_score(validation_labels, one_hot_predictions)))

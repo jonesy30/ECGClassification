@@ -10,10 +10,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
+from keras.layers import Dense, LSTM, Bidirectional, Dropout
 from keras.layers.embeddings import Embedding
-from keras.layers import Dropout
 import pandas as pd
 from tensorflow.keras.utils import to_categorical
 
@@ -119,13 +117,16 @@ validation_labels = to_categorical(validation_labels,num_classes=len(class_names
 #embedding_vecor_length = 500
 model = Sequential()
 #model.add(Embedding(200, embedding_vecor_length, input_length=max_length))
-model.add(LSTM(60, return_sequences=True, input_shape=(2600, 1)))
-model.add(Dropout(0.2))
-model.add(LSTM(60))
-model.add(Dropout(0.2))
+model.add(Bidirectional(LSTM(100, return_sequences=False, input_shape=(2600, 1))))
+# model.add(Dropout(0.2))
+# model.add(LSTM(60))
+# model.add(Dropout(0.2))
 model.add(Dense(len(class_names), activation='sigmoid'))
+
+epochs = 1
+
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-model.fit(training_data, training_labels, epochs=1, batch_size=200)
+model.fit(training_data, training_labels, epochs=epochs, batch_size=200)
 print(model.summary())
 # Final evaluation of the model
 scores = model.evaluate(validation_data, validation_labels, verbose=1)
@@ -140,4 +141,7 @@ for value in predictions:
 df = pd.DataFrame(one_hot_predictions)
 print(df[0].value_counts())
 
-print("F1 Score: "+str(f1_score(validation_labels, one_hot_predictions)))
+predicted_encoded = np.argmax(predicted_labels, axis=1)
+actual_encoded = validation_labels
+
+print("F1 Score: "+str(f1_score(actual_encoded, one_hot_predictions)))

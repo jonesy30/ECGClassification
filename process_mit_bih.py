@@ -48,11 +48,11 @@ def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0):
         f.write(to_write)
     f.close()
 
-def get_full_ecg(filenumber):
+def get_full_ecg(filenumber, base_filename="mit_bih/"):
     max_length = 1300
     
-    annotation = wfdb.rdann('mit_bih/'+str(filenumber), 'atr', sampto=650000)
-    ecg_signal, _ = wfdb.srdsamp('mit_bih/'+str(filenumber))
+    annotation = wfdb.rdann(base_filename+str(filenumber), 'atr', sampto=650000)
+    ecg_signal, _ = wfdb.srdsamp(base_filename+str(filenumber))
 
     ecg_lead_1 = ecg_signal[:,0]
     ecg_lead_2 = ecg_signal[:,1]
@@ -94,13 +94,13 @@ def get_full_ecg(filenumber):
     
     return complete_beats
 
-def plot_ecg(filenumber):
+def plot_ecg(filenumber, base_filename="mit_bih/", title="MIT-BIH Arrhythmia Database"):
 
-    record = wfdb.rdsamp('mit_bih/'+str(filenumber), sampto=3000, smoothframes=True)
-    annotation = wfdb.rdann('mit_bih/'+str(filenumber), 'atr', sampto=3000)
+    record = wfdb.rdsamp(base_filename+str(filenumber), sampto=3000, smoothframes=True)
+    annotation = wfdb.rdann(base_filename+str(filenumber), 'atr', sampto=3000)
     #Annotation attributes: record_name, extension, sample (indices), symbol (classes), subtype, chan, num, aux_note, fs, label_store, description, custom_labels, contained_labels
 
-    wfdb.plotrec(record, annotation = annotation, title="Record "+str(filenumber)+" from MIT-BIH Arrhythmia Database", figsize = (10,4), ecggrids = 'all',plotannsym=True)
+    wfdb.plotrec(record, annotation = annotation, title="Record "+str(filenumber)+title, figsize = (10,4), ecggrids = 'all',plotannsym=True)
 
 def process_files():
 

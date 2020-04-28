@@ -107,3 +107,4 @@ venv.bak/
 /raw_ecg_data
 /mit_bih*
 /hannun*
+/external*

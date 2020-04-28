@@ -141,9 +141,9 @@ def process_files():
                 #signal = np.pad(signal, (0, max_length - len(signal)), 'constant')
                 total_lengths.add(len(signal))
 
-                #leave_out_array = ["104","208","113","210","119"]
+                leave_out_array = ["104","208","113","210","119"]
                 #leave_out_array = ["124","200","115","207","228","119","113","210","104","208"]
-                leave_out_array = ["124","200","115","207","228"]
+                #leave_out_array = ["124","200","115","207","228"]
                 if (leave_one_out_validation == 1) and (any(x in file for x in leave_out_array)):
                     write_to_file(signal, beat_label, write_counter, validation_flag=1)
                 else:
@@ -158,33 +158,33 @@ def process_files():
     print("Files Written = "+str(write_counter))
 
 if __name__ == "__main__":
-    #process_files()
+    process_files()
     #plot_ecg(232)
 
-    for f in glob.glob("./hannun_validation_data/*.txt"):
-        #f = "./hannun_validation_data/ecg_63.txt"
-        # f = "./mit_bih_processed_data/N/ecg_82473.txt"
+    # for f in glob.glob("./hannun_validation_data/*.txt"):
+    #     #f = "./hannun_validation_data/ecg_63.txt"
+    #     # f = "./mit_bih_processed_data/N/ecg_82473.txt"
 
-        file = open(f, "r")
-        ecg_string = file.read()
-        ecg_string = ecg_string.replace("\nN",'')
-        ecg_string = ecg_string.strip()
-        ecg = ecg_string.split(" ")
+    #     file = open(f, "r")
+    #     ecg_string = file.read()
+    #     ecg_string = ecg_string.replace("\nN",'')
+    #     ecg_string = ecg_string.strip()
+    #     ecg = ecg_string.split(" ")
 
-        print(len(ecg))
+    #     print(len(ecg))
 
-        ecg = [int(n) for n in ecg]
-        ecg = ecg[:1300]
+    #     ecg = [int(n) for n in ecg]
+    #     ecg = ecg[:1300]
 
-        plt.xlabel("Seconds")
-        plt.ylabel("Microvolts")
-        plt.title(f)
+    #     plt.xlabel("Seconds")
+    #     plt.ylabel("Microvolts")
+    #     plt.title(f)
 
-        ax = plt.axes()
+    #     ax = plt.axes()
 
-        axlabels = np.arange(0,1,0.124)
-        axlabels = [round(x,1) for x in axlabels]
-        ax.set_xticklabels(axlabels)
+    #     axlabels = np.arange(0,1,0.124)
+    #     axlabels = [round(x,1) for x in axlabels]
+    #     ax.set_xticklabels(axlabels)
 
-        plt.plot(ecg)
-        plt.show()
+    #     plt.plot(ecg)
+    #     plt.show()

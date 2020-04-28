@@ -141,7 +141,7 @@ for value in predictions:
 df = pd.DataFrame(one_hot_predictions)
 print(df[0].value_counts())
 
-predicted_encoded = np.argmax(predicted_labels, axis=1)
+predicted_encoded = np.argmax(predictions, axis=1)
 actual_encoded = validation_labels
 
 print("F1 Score: "+str(f1_score(actual_encoded, one_hot_predictions)))

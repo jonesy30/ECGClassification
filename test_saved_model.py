@@ -75,7 +75,7 @@ new_model = tf.keras.models.load_model(model_location)
 
 print(new_model.summary())
 
-base_filename = "./external_validation_data/mit_bih_nsr_subset/"
+base_filename = "./mit_bih_processed_data_two_leads_subset/network_data/validation_data"
 #base_filename + "network_data/validation_set/"
 #"hannun_validation_data/""
 (validation_data, validation_labels) = read_data(base_filename,save_unnormalised=False)

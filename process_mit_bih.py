@@ -24,22 +24,22 @@ beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTI
 # /		Paced beat
 # f		Fusion of paced and normal beat (not included)
 
-leave_one_out_validation = 1
+leave_one_out_validation = 0
 
-def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0):
+def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filename="./mit_bih_processed_data_two_leads"):
     
     if validation_flag == 1:
-        if not os.path.exists("./mit_bih_processed_data_two_leads/network_validation/"+rhythm_name):
-            os.makedirs("./mit_bih_processed_data_two_leads/network_validation/"+rhythm_name)
+        if not os.path.exists(base_filename+"/network_validation/"+rhythm_name):
+            os.makedirs(base_filename+"/network_validation/"+rhythm_name)
 
-        f= open("./mit_bih_processed_data_two_leads/network_validation/"+rhythm_name+"/ecg_"+str(index)+".txt","w")
+        f= open(base_filename+"/network_validation/"+rhythm_name+"/ecg_"+str(index)+".txt","w")
         print("Validation set - "+rhythm_name)
 
     else:
-        if not os.path.exists("./mit_bih_processed_data_two_leads/"+rhythm_name):
-            os.makedirs("./mit_bih_processed_data_two_leads/"+rhythm_name)
+        if not os.path.exists(base_filename+rhythm_name):
+            os.makedirs(base_filename+rhythm_name)
 
-        f= open("./mit_bih_processed_data_two_leads/"+rhythm_name+"/ecg_"+str(index)+".txt","w")
+        f= open(base_filename+rhythm_name+"/ecg_"+str(index)+".txt","w")
 
     for value in ecg_plot:
         value_int = int(round(value*1000))
@@ -102,7 +102,7 @@ def plot_ecg(filenumber, base_filename="mit_bih/", title="MIT-BIH Arrhythmia Dat
 
     wfdb.plotrec(record, annotation = annotation, title="Record "+str(filenumber)+title, figsize = (10,4), ecggrids = 'all',plotannsym=True)
 
-def process_files():
+def process_files(base_filename="mit_bih/"):
 
     ecg_files = []
     write_counter = 0
@@ -112,7 +112,7 @@ def process_files():
     biggest_file_class = ""
     total_lengths = set()
 
-    for file in glob.glob("mit_bih/*.atr"):
+    for file in glob.glob(base_filename+"*.atr"):
         split, _ = file.split(".")
         _, name = split.split("\\")
         filenumber = name.split("-")
@@ -125,7 +125,7 @@ def process_files():
         ecg_files.append(filenumber)
         print(filenumber)
 
-        complete_beats = get_full_ecg(filenumber)
+        complete_beats = get_full_ecg(filenumber, base_filename=base_filename)
 
         for sig_beat in complete_beats:
             signal, beat_label = sig_beat
@@ -147,7 +147,8 @@ def process_files():
                 if (leave_one_out_validation == 1) and (any(x in file for x in leave_out_array)):
                     write_to_file(signal, beat_label, write_counter, validation_flag=1)
                 else:
-                    write_to_file(signal, beat_label, write_counter)
+                    destination_filename = "external_validation_data/st_petersburg/"
+                    write_to_file(signal, beat_label, write_counter, base_filename=destination_filename)
                 write_counter += 1
         print("Max = "+str(current_max))
         print("Max file = "+str(biggest_file))
@@ -158,10 +159,10 @@ def process_files():
     print("Files Written = "+str(write_counter))
 
 if __name__ == "__main__":
-    process_files()
+    process_files(base_filename="external_original/st_petersburg/files/")
     #plot_ecg(232)
 
-    #plot_ecg(16420,base_filename="mit_bih_normal/",title="MIT-BIH Normal Database")
+    #plot_ecg("I01",base_filename="./external_original/st_petersburg/files/",title="St Petersburg INCART Dataset")
 
     # for f in glob.glob("./hannun_validation_data/*.txt"):
     #     #f = "./hannun_validation_data/ecg_63.txt"

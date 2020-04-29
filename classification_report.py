@@ -7,6 +7,7 @@ import matplotlib.patches as patches
 import matplotlib.mlab as mlab
 import matplotlib.gridspec as gridspec
 from matplotlib.ticker import NullFormatter, FixedLocator
+from tensorflow.keras.utils import to_categorical
 
 def get_classification_report(true_labels, predicted_labels):
     
@@ -17,6 +18,10 @@ def get_classification_report(true_labels, predicted_labels):
     return recall, precision, f1_score
 
 def plot_classification_report(y_true,y_pred,classes,show_plot=True):
+
+    y_true = to_categorical(y_true, num_classes=len(classes))
+    y_pred = to_categorical(y_pred, num_classes=len(classes))
+
     recall, precision, f1_score = get_classification_report(y_true, y_pred)
 
     # build a rectangle in axes coords
@@ -57,8 +62,8 @@ def plot_classification_report(y_true,y_pred,classes,show_plot=True):
 
 if __name__ == "__main__":
     classes = ["one","two","three","four","five","six","seven","eight"]
-    y_true = [1,2,3,4,5,6,7,8]
-    y_pred = [1,2,4,5,5,6,7,4]
+    y_true = [4,0,7,7,7,7,7,7]
+    y_pred = [4,0,7,6,4,7,6,4]
 
     recall, precision, f1_score = get_classification_report(y_true, y_pred)
     print("Recall = "+str(recall))

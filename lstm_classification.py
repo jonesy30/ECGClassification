@@ -139,9 +139,6 @@ print(df[0].value_counts())
 predicted_encoded = np.argmax(predictions, axis=1)
 actual_encoded = np.argmax(validation_labels, axis=1)
 
-print(actual_encoded[:5])
-print(predicted_encoded[:5])
-
 recall, precision, f1_score = plot_classification_report(actual_encoded, predicted_encoded, classes=class_names)
 print("Recall = "+str(recall))
 print("Precision = "+str(precision))

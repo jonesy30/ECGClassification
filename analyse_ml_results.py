@@ -6,33 +6,35 @@ from plot_confusion_matrix import plot_confusion_matrix
 import time
 from classification_report import plot_classification_report
 from visualise_incorrect_predictions import save_incorrect_predictions
+import pandas as pd
 
 def analyse_results(history, validation_data, validation_labels, predicted_labels, model_type, base_filename, unnormalised_validation, test_acc):
     class_names = ['A','E','j','L','N','P','R','V']
     labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
     label_names = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','P':'Paced'}
 
+    if history != None:
 
-    if 'accuracy' in history.history.keys():
-        plt.plot(history.history['accuracy'])
-        plt.plot(history.history['val_accuracy'])
-    elif 'acc' in history.history.keys():
-        plt.plot(history.history['acc'])
-        plt.plot(history.history['val_acc'])
+        if 'accuracy' in history.history.keys():
+            plt.plot(history.history['accuracy'])
+            plt.plot(history.history['val_accuracy'])
+        elif 'acc' in history.history.keys():
+            plt.plot(history.history['acc'])
+            plt.plot(history.history['val_acc'])
 
-    plt.title('Model Accuracy ('+model_type+')')
-    plt.ylabel('accuracy')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
-    plt.figure()
-    # summarize history for loss
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.title('Model Loss ('+model_type+')')
-    plt.ylabel('loss')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
-    plt.figure()
+        plt.title('Model Accuracy ('+model_type+')')
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        plt.figure()
+        # summarize history for loss
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.title('Model Loss ('+model_type+')')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        plt.figure()
 
     tested = 0
     correct = 0
@@ -106,7 +108,8 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
 
 
     #Plot the confusion matrix of the expected and predicted classes
-    matrix = confusion_matrix(actual_encoded, predicted_encoded, normalize='all')
+
+    matrix = confusion_matrix(actual_encoded, predicted_encoded, labels=np.arange(0,len(class_names)-1,1), normalize='all')
     plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix ("+model_type+"), Accuracy = "+str(round(test_acc*100,2))+"%")
 
     plot_classification_report(actual_encoded, predicted_encoded, labels, show_plot=False)

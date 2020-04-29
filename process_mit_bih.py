@@ -159,35 +159,43 @@ def process_files(base_filename="mit_bih/"):
     print("Files Written = "+str(write_counter))
 
 if __name__ == "__main__":
-    process_files(base_filename="external_original/st_petersburg/files/")
+    #process_files(base_filename="external_original/st_petersburg/files/")
     #plot_ecg(232)
 
     #plot_ecg("I01",base_filename="./external_original/st_petersburg/files/",title="St Petersburg INCART Dataset")
 
-    # for f in glob.glob("./hannun_validation_data/*.txt"):
-    #     #f = "./hannun_validation_data/ecg_63.txt"
-    #     # f = "./mit_bih_processed_data/N/ecg_82473.txt"
+    for f in glob.glob("./external_validation_data/mit_bih_nsr_subset/cnn/network_incorrect_results/N/j/*.txt"):
+        #f = "./hannun_validation_data/ecg_63.txt"
+        # f = "./mit_bih_processed_data/N/ecg_82473.txt"
 
-    #     file = open(f, "r")
-    #     ecg_string = file.read()
-    #     ecg_string = ecg_string.replace("\nN",'')
-    #     ecg_string = ecg_string.strip()
-    #     ecg = ecg_string.split(" ")
+        file = open(f, "r")
+        ecg_string = file.read()
+        ecg_string = ecg_string.replace("\nN",'')
+        ecg_string = ecg_string.strip()
+        ecg = ecg_string.split(" ")
 
-    #     print(len(ecg))
+        print(len(ecg))
 
-    #     ecg = [int(n) for n in ecg]
-    #     ecg = ecg[:1300]
+        ecg = [int(n) for n in ecg]
+        ecg_1 = ecg[:1300]
+        ecg_2 = ecg[1300:]
 
-    #     plt.xlabel("Seconds")
-    #     plt.ylabel("Microvolts")
-    #     plt.title(f)
+        fig, axs = plt.subplots(2)
+        fig.suptitle(str(os.path.basename(f)))
+        axs[0].plot(ecg_1)
+        axs[1].plot(ecg_2)
 
-    #     ax = plt.axes()
+        plt.xlabel("Samples (at 360 Hz)")
+        #plt.title(f)
 
-    #     axlabels = np.arange(0,1,0.124)
-    #     axlabels = [round(x,1) for x in axlabels]
-    #     ax.set_xticklabels(axlabels)
+        for ax in axs.flat:
+            ax.set(ylabel='Microvolts')
 
-    #     plt.plot(ecg)
-    #     plt.show()
+        # ax = plt.axes()
+
+        # axlabels = np.arange(0,1,0.124)
+        # axlabels = [round(x,1) for x in axlabels]
+        # ax.set_xticklabels(axlabels)
+
+        #plt.plot(ecg)
+        plt.show()

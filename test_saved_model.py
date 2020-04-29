@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from tensorflow.keras.utils import to_categorical
+from analyse_ml_results import analyse_results
 #from cnn_classification import read_data
 
 class_names = ['A','E','j','L','N','P','R','V']
@@ -75,12 +76,14 @@ new_model = tf.keras.models.load_model(model_location)
 
 print(new_model.summary())
 
-base_filename = "./mit_bih_processed_data_two_leads_subset/network_data/validation_data"
+base_filename = "./external_validation_data/st_petersburg/network_data/validation_set/"
 #base_filename + "network_data/validation_set/"
 #"hannun_validation_data/""
-(validation_data, validation_labels) = read_data(base_filename,save_unnormalised=False)
+([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename,save_unnormalised=True)
 #print(len(validation_data))
 #validation_data = np.reshape(validation_data,(2600,len(validation_data)))
+
+print("Finished reading validation data")
 
 validation_data = [np.asarray(item) for item in validation_data]
 validation_data = np.array(validation_data)
@@ -95,7 +98,15 @@ if "cnn" in model_location:
     validation_data = validation_data[:, :, np.newaxis]
     validation_labels = to_categorical(validation_labels,num_classes=len(class_names))
 
+print("Finished converting")
+
 loss, acc = new_model.evaluate(validation_data,  validation_labels, verbose=2)
 print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+
+predicted_labels = new_model.predict(validation_data)
+
+print(validation_labels[:50])
+analyse_results(None, validation_data, validation_labels, predicted_labels, "cnn", base_filename, unnormalised_validation, acc)
+    
 
 #print(new_model.predict(test_images).shape)

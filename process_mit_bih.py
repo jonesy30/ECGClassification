@@ -26,7 +26,7 @@ beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTI
 
 leave_one_out_validation = 0
 
-def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filename="./mit_bih_processed_data_two_leads"):
+def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filename="./mit_bih_processed_data_two_leads/"):
     
     if validation_flag == 1:
         if not os.path.exists(base_filename+"/network_validation/"+rhythm_name):
@@ -49,7 +49,7 @@ def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filena
     f.close()
 
 def get_full_ecg(filenumber, base_filename="mit_bih/"):
-    max_length = 1300
+    max_length = 430
     
     annotation = wfdb.rdann(base_filename+str(filenumber), 'atr', sampto=650000)
     ecg_signal, _ = wfdb.srdsamp(base_filename+str(filenumber))
@@ -79,18 +79,19 @@ def get_full_ecg(filenumber, base_filename="mit_bih/"):
             end_recording = ((beat_after-current_beat)//2)+current_beat
 
             complete_beat_1 = ecg_lead_1[start_recording:end_recording]
-            complete_beat_1 = np.pad(complete_beat_1, (0, max_length - len(complete_beat_1)), 'constant')
-
             complete_beat_2 = ecg_lead_2[start_recording:end_recording]
-            complete_beat_2 = np.pad(complete_beat_2, (0, max_length - len(complete_beat_2)), 'constant')
 
-            complete_beat = np.append(complete_beat_1, complete_beat_2)
+            if len(complete_beat_1) <= max_length:
+                complete_beat_1 = np.pad(complete_beat_1, (0, max_length - len(complete_beat_1)), 'constant')
+                complete_beat_2 = np.pad(complete_beat_2, (0, max_length - len(complete_beat_2)), 'constant')
 
-            #print(complete_beat)
-            beat_label = annotation_classes[index]
+                complete_beat = np.append(complete_beat_1, complete_beat_2)
 
-            beat_indexes.append([start_recording,end_recording,beat_label])
-            complete_beats.append([complete_beat,beat_label])
+                #print(complete_beat)
+                beat_label = annotation_classes[index]
+
+                beat_indexes.append([start_recording,end_recording,beat_label])
+                complete_beats.append([complete_beat,beat_label])
     
     return complete_beats
 
@@ -106,7 +107,6 @@ def process_files(base_filename="mit_bih/"):
 
     ecg_files = []
     write_counter = 0
-    max_length = 1300
     current_max = 0
     biggest_file = 0
     biggest_file_class = ""
@@ -159,43 +159,44 @@ def process_files(base_filename="mit_bih/"):
     print("Files Written = "+str(write_counter))
 
 if __name__ == "__main__":
-    #process_files(base_filename="external_original/st_petersburg/files/")
+    #process_files()
+    process_files(base_filename="external_original/st_petersburg/files/")
     #plot_ecg(232)
 
     #plot_ecg("I01",base_filename="./external_original/st_petersburg/files/",title="St Petersburg INCART Dataset")
 
-    for f in glob.glob("./external_validation_data/mit_bih_nsr_subset/cnn/network_incorrect_results/N/j/*.txt"):
-        #f = "./hannun_validation_data/ecg_63.txt"
-        # f = "./mit_bih_processed_data/N/ecg_82473.txt"
+    # for f in glob.glob("./external_validation_data/mit_bih_nsr_subset/cnn/network_incorrect_results/N/j/*.txt"):
+    #     #f = "./hannun_validation_data/ecg_63.txt"
+    #     # f = "./mit_bih_processed_data/N/ecg_82473.txt"
 
-        file = open(f, "r")
-        ecg_string = file.read()
-        ecg_string = ecg_string.replace("\nN",'')
-        ecg_string = ecg_string.strip()
-        ecg = ecg_string.split(" ")
+    #     file = open(f, "r")
+    #     ecg_string = file.read()
+    #     ecg_string = ecg_string.replace("\nN",'')
+    #     ecg_string = ecg_string.strip()
+    #     ecg = ecg_string.split(" ")
 
-        print(len(ecg))
+    #     print(len(ecg))
 
-        ecg = [int(n) for n in ecg]
-        ecg_1 = ecg[:1300]
-        ecg_2 = ecg[1300:]
+    #     ecg = [int(n) for n in ecg]
+    #     ecg_1 = ecg[:1300]
+    #     ecg_2 = ecg[1300:]
 
-        fig, axs = plt.subplots(2)
-        fig.suptitle(str(os.path.basename(f)))
-        axs[0].plot(ecg_1)
-        axs[1].plot(ecg_2)
+    #     fig, axs = plt.subplots(2)
+    #     fig.suptitle(str(os.path.basename(f)))
+    #     axs[0].plot(ecg_1)
+    #     axs[1].plot(ecg_2)
 
-        plt.xlabel("Samples (at 360 Hz)")
-        #plt.title(f)
+    #     plt.xlabel("Samples (at 360 Hz)")
+    #     #plt.title(f)
 
-        for ax in axs.flat:
-            ax.set(ylabel='Microvolts')
+    #     for ax in axs.flat:
+    #         ax.set(ylabel='Microvolts')
 
-        # ax = plt.axes()
+    #     # ax = plt.axes()
 
-        # axlabels = np.arange(0,1,0.124)
-        # axlabels = [round(x,1) for x in axlabels]
-        # ax.set_xticklabels(axlabels)
+    #     # axlabels = np.arange(0,1,0.124)
+    #     # axlabels = [round(x,1) for x in axlabels]
+    #     # ax.set_xticklabels(axlabels)
 
-        #plt.plot(ecg)
-        plt.show()
+    #     #plt.plot(ecg)
+    #     plt.show()

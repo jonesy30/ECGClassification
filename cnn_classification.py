@@ -94,7 +94,7 @@ def read_data(foldername,save_unnormalised=False):
 
 start_time = time.time()
 
-base_filename = "./mit_bih_processed_data_two_leads_subset/"
+base_filename = "./mit_bih_processed_data_two_leads/"
 
 (training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
 
@@ -134,7 +134,7 @@ training_data = df_oversampled.drop(columns='label').to_numpy()
 training_data = training_data[:, :, np.newaxis]
 training_labels = to_categorical(training_labels)
 
-input_size = 2600 #400 for other dataset
+input_size = 860 #400 for other dataset
 
 #Build the intial model
 model = keras.Sequential([
@@ -162,7 +162,7 @@ model.add(keras.layers.Dense(len(class_names), activation='softmax'))
 
 #MAGIC NUMBERS
 verbose = 1
-epochs = 50
+epochs = 30
 batch_size = 100
 
 #Build and fit the model

@@ -97,8 +97,8 @@ start_time = time.time()
 
 #get the training data and labels
 
-base_filename = "./mit_bih_processed_data_two_leads_subset/"
-(training_data, training_labels) = read_data(base_filename+"network_data/validation_set/")
+base_filename = "./mit_bih_processed_data_two_leads/"
+(training_data, training_labels) = read_data(base_filename+"network_data/training_set/")
 
 #format the training data into a numpy array of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
@@ -171,6 +171,13 @@ print(history.history.keys())
 print("Model Summary")
 print(model.summary())
 
+if not os.path.exists("./saved_models/"):
+    os.makedirs("./saved_models/")
+if not os.path.exists("./saved_models/fully_connected/"):
+    os.makedirs("./saved_models/fully_connected/")
+
+model.save(".\\saved_models\\fully_connected\\fully_connected_model")
+
 del training_data
 del training_labels
 
@@ -195,12 +202,5 @@ predicted_encoded = np.argmax(predicted_labels, axis=1)
 
 end_time = time.time()
 print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
-
-if not os.path.exists("./saved_models/"):
-    os.makedirs("./saved_models/")
-if not os.path.exists("./saved_models/fully_connected/"):
-    os.makedirs("./saved_models/fully_connected/")
-
-model.save(".\\saved_models\\fully_connected\\fully_connected_model")
 
 analyse_results(history, validation_data, validation_labels, predicted_labels, "fully_connected", base_filename, unnormalised_validation, test_acc)

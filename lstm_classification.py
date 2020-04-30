@@ -14,6 +14,7 @@ from keras.layers import Dense, LSTM, Bidirectional, Dropout
 from keras.layers.embeddings import Embedding
 import pandas as pd
 from tensorflow.keras.utils import to_categorical
+from classification_report import plot_classification_report
 
 class_names = ['A','E','j','L','N','P','R','V']
 
@@ -78,15 +79,9 @@ def read_data(foldername,save_unnormalised=False):
 
     return data, labels
 
-base_filename = "./mit_bih_processed_data_two_leads_subset/network_data/"
+base_filename = "./mit_bih_subset/network_data/"
 (training_data, training_labels) = read_data(base_filename + "training_set/",save_unnormalised=False)
 (validation_data, validation_labels) = read_data(base_filename + "validation_set/",save_unnormalised=False)
-
-training_data = training_data[:1000]
-training_labels = training_labels[:1000]
-
-validation_data = validation_data[:500]
-validation_labels = validation_labels[:500]
 
 #Turn each training data array into numpy arrays of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
@@ -142,6 +137,9 @@ df = pd.DataFrame(one_hot_predictions)
 print(df[0].value_counts())
 
 predicted_encoded = np.argmax(predictions, axis=1)
-actual_encoded = validation_labels
+actual_encoded = np.argmax(validation_labels, axis=1)
 
-print("F1 Score: "+str(f1_score(actual_encoded, one_hot_predictions)))
+recall, precision, f1_score = plot_classification_report(actual_encoded, predicted_encoded, classes=class_names)
+print("Recall = "+str(recall))
+print("Precision = "+str(precision))
+print("F1 score = "+str(f1_score))

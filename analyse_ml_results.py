@@ -5,8 +5,9 @@ from sklearn.metrics import confusion_matrix
 from plot_confusion_matrix import plot_confusion_matrix
 import time
 from classification_report import plot_classification_report
-from visualise_incorrect_predictions import save_incorrect_predictions
+from visualise_incorrect_predictions import save_predictions
 import pandas as pd
+from sklearn.metrics import f1_score, precision_score, recall_score
 
 def analyse_results(history, validation_data, validation_labels, predicted_labels, model_type, base_filename, unnormalised_validation, test_acc):
     class_names = ['A','E','j','L','N','P','R','V']
@@ -46,6 +47,10 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
     incorrectly_identified_predicted_labels = []
     incorrectly_identified_true_labels = []
 
+    correctly_identified_ecgs = []
+    correctly_identified_predicted_labels = []
+    correctly_identified_true_labels = []
+
     #Format the predictions into incorrect and correct predictions
     for i in range(len(validation_data)):
         predicted = np.where(predicted_labels[i] == np.amax(predicted_labels[i]))
@@ -62,6 +67,11 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
         if actual == predicted_value:
             correct = correct + 1
             correct_predictions[actual] = correct_predictions[actual] + 1
+
+            correctly_identified_ecgs.append(unnormalised_validation[i])
+            correctly_identified_predicted_labels.append(class_names[predicted_value])
+            correctly_identified_true_labels.append(class_names[actual])
+
         else:
             incorrect_predictions[actual] = incorrect_predictions[actual] + 1
             
@@ -72,9 +82,11 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
     file_location = base_filename
     if "cnn" in model_type:
         file_location = base_filename+"/cnn/"
-    elif "fully connected" in model_type.lower():
+    elif "fully" in model_type.lower():
         file_location = base_filename+"/fully_connected/"
-    save_incorrect_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, file_location)
+    
+    save_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, file_location+"/network_incorrect_predictions/")
+    save_predictions(correctly_identified_ecgs, correctly_identified_predicted_labels, correctly_identified_true_labels, file_location+"/network_correct_predictions/")
 
     accuracy = correct/tested
 
@@ -116,8 +128,13 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
 
     plt.figure()
 
-    # tboard_log_dir = os.path.join("logs",NAME)
-    # tensorboard = TensorBoard(log_dir = tboard_log_dir)
+    overall_f1 = f1_score(actual_encoded, predicted_encoded, average='macro')
+    overall_precision = precision_score(actual_encoded, predicted_encoded, average='macro')
+    overall_recall = recall_score(actual_encoded, predicted_encoded, average='macro')
+
+    print("Overall F1: "+str(overall_f1))
+    print("Overall Precision: "+str(overall_precision))
+    print("Overall Recall: "+str(overall_recall))
 
     #Plot prediction accuracy percentages
     plt.bar(class_names, accuracy_of_predictions)

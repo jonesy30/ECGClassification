@@ -8,6 +8,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import Lambda
+from tensorflow.keras.layers import BatchNormalization
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -19,12 +20,15 @@ import time
 from classification_report import plot_classification_report
 from visualise_incorrect_predictions import save_incorrect_predictions
 from analyse_ml_results import analyse_results
+from sklearn.utils import resample
 
 #class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 class_names = ['A','E','j','L','N','P','R','V']
 labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
 
 label_names = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','P':'Paced'}
+
+two_leads = 1
 
 #Function which normalizes the ECG signal
 def normalize(ecg_signal, filename):
@@ -63,8 +67,10 @@ def read_data(foldername,save_unnormalised=False):
             #ECG signal stored in first line separated by spaces
             if i < 1:
                 line_segments = line.split()
-                for i,item in enumerate(line_segments):
-                    line_segments[i] = float(item)
+
+                if two_leads == 0:
+                    line_segments = line_segments[:430]
+                line_segments = [float(x) for x in line_segments]
 
                 for item in line_segments:
                     found_data.append(item)
@@ -111,19 +117,32 @@ df = pd.DataFrame(training_data)
 df['label'] = training_labels
 
 #Get the size of the largest class (so I know how much to upsample by)
+print("Downsampling")
+print(df['label'].value_counts())
+
 max_label = df['label'].value_counts().idxmax()
-max_number = df['label'].value_counts()[max_label]
+
+downsampled_df = df[df['label']!=max_label]
+second_max_class = downsampled_df['label'].value_counts().max()
+df_majority_downsampled = resample(df[df['label']==max_label], replace=False, n_samples=second_max_class, random_state=123)
+
+downsampled_df = pd.concat([df_majority_downsampled, downsampled_df])
+print(downsampled_df['label'].value_counts())
+
+max_number = downsampled_df['label'].value_counts()[max_label]
 
 #Create an upsampling space, initially fill it with the largest category
-df_oversampled = df[df['label']==max_label]
+df_oversampled = downsampled_df[downsampled_df['label']==max_label]
 
 #For each smaller class, oversample it and add to the oversampling space
-for value in range(df['label'].nunique()):
+for value in range(downsampled_df['label'].nunique()):
     if value != max_label:
-        df_class = df[df['label']==value]
+        df_class = downsampled_df[downsampled_df['label']==value]
         df_class_over = df_class.sample(max_number, replace=True)
         df_class_over = pd.DataFrame(df_class_over)
         df_oversampled = pd.concat([df_oversampled, df_class_over])
+
+print(df_oversampled['label'].value_counts())
 
 #Convert the upsampled data to training and labelled data
 training_labels = df_oversampled['label'].tolist()
@@ -132,13 +151,17 @@ training_data = df_oversampled.drop(columns='label').to_numpy()
 
 #Resize training data to fit CNN input layer and convert labels to one-hot encoding
 training_data = training_data[:, :, np.newaxis]
+
 training_labels = to_categorical(training_labels)
 
-input_size = 860 #400 for other dataset
+if two_leads == 0:
+    input_shape = 430
+else:
+    input_shape = 860
 
 #Build the intial model
 model = keras.Sequential([
-    keras.layers.InputLayer(input_shape=[input_size,1])
+    keras.layers.InputLayer(input_shape=[input_shape,1])
     #keras.layers.Lambda(lambda v: tf.cast(tf.spectral.fft(tf.cast(v,dtype=tf.complex64)),tf.float32))
     #Dropout(0.2)
     #keras.layers.Conv1D(kernel_size=10, filters=128, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
@@ -146,7 +169,7 @@ model = keras.Sequential([
 ])
 #Add extra labels
 
-model.add(keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, input_shape=(input_size,1), use_bias=True, kernel_initializer='VarianceScaling'))
+model.add(keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, input_shape=(input_shape,1), use_bias=True, kernel_initializer='VarianceScaling'))
 model.add(keras.layers.LeakyReLU(alpha=0.3))
 model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1, padding="same"))
 model.add(Dropout(0.5))
@@ -160,10 +183,45 @@ model.add(Dropout(0.5))
 model.add(keras.layers.Flatten())
 model.add(keras.layers.Dense(len(class_names), activation='softmax'))
 
+#Structure from Hannun et al
+# model = keras.Sequential()
+
+# #block 1
+# model.add(keras.layers.InputLayer(input_shape=[input_shape,1]))
+# model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, input_shape=(input_shape,1), use_bias=True, kernel_initializer='VarianceScaling'))
+# model.add(keras.layers.BatchNormalization())
+# model.add(keras.layers.LeakyReLU(alpha=0.3))
+
+# #block 2
+# model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
+# model.add(keras.layers.BatchNormalization())
+# model.add(keras.layers.LeakyReLU(alpha=0.3))
+# model.add(keras.layers.Dropout(0.2))
+
+
+# #block 3
+# for i in range(12):
+#     filters = 32*(2**(i//4))
+#     print("Filter size = "+str(filters))
+#     model.add(keras.layers.Conv1D(kernel_size=16, filters=filters, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
+#     model.add(keras.layers.BatchNormalization())
+#     model.add(keras.layers.LeakyReLU(alpha=0.3))
+#     model.add(keras.layers.Conv1D(kernel_size=16, filters=filters, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
+#     model.add(keras.layers.BatchNormalization())
+#     model.add(keras.layers.LeakyReLU(alpha=0.3))
+#     model.add(Dropout(0.2))
+
+# #block 4
+# model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
+# model.add(keras.layers.BatchNormalization())
+# model.add(keras.layers.LeakyReLU(alpha=0.3))
+# model.add(keras.layers.Flatten())
+# model.add(keras.layers.Dense(len(class_names), activation='softmax'))
+
 #MAGIC NUMBERS
 verbose = 1
 epochs = 30
-batch_size = 100
+batch_size = 128
 
 #Build and fit the model
 model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
@@ -205,8 +263,8 @@ print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
 
 if not os.path.exists("./saved_models/"):
     os.makedirs("./saved_models/")
-if not os.path.exists("./saved_models/CNN/"):
-    os.makedirs("./saved_models/CNN/")
+if not os.path.exists("./saved_models/cnn/"):
+    os.makedirs("./saved_models/cnn/")
 
 model.save(".\\saved_models\\cnn\\cnn_model")
 

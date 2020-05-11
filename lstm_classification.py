@@ -14,9 +14,10 @@ from keras.layers import Dense, LSTM, Bidirectional, Dropout
 from keras.layers.embeddings import Embedding
 import pandas as pd
 from tensorflow.keras.utils import to_categorical
-from classification_report import plot_classification_report
+from analyse_ml_results import analyse_results
 
 class_names = ['A','E','j','L','N','P','R','V']
+two_leads = 0
 
 def normalize(ecg_signal, filename):
     max_value = max(ecg_signal)
@@ -24,10 +25,10 @@ def normalize(ecg_signal, filename):
 
     range_values = max_value - min_value
 
-    if range_values == 0:
-        print(max_value)
-        print(min_value)
-        print(filename)
+    # if range_values == 0:
+    #     print(max_value)
+    #     print(min_value)
+    #     print(filename)
 
     if range_values == 0:
         return ecg_signal
@@ -45,21 +46,20 @@ def read_data(foldername,save_unnormalised=False):
         f = open(str(foldername+file), "r")
         found_data = []
         label = ""
-        label_text = ""
         for i,line in enumerate(f):
             line = line.replace("\n","")
             #ECG signal stored in first line separated by spaces
             if i < 1:
                 line_segments = line.split()
-                for i,item in enumerate(line_segments):
-                    line_segments[i] = float(item)
+
+                if two_leads == 0:
+                    line_segments = line_segments[:430]
+                line_segments = [float(x) for x in line_segments]
 
                 for item in line_segments:
                     found_data.append(item)
             #label stored on second line
             else:
-                label_text = line
-                #if label_text != "OTHER":
                 if str(line) not in class_names:
                     label = ""
                 else:
@@ -79,9 +79,8 @@ def read_data(foldername,save_unnormalised=False):
 
     return data, labels
 
-base_filename = "./mit_bih_subset/network_data/"
+base_filename = "./mit_bih_processed_data_two_leads/network_data/"
 (training_data, training_labels) = read_data(base_filename + "training_set/",save_unnormalised=False)
-(validation_data, validation_labels) = read_data(base_filename + "validation_set/",save_unnormalised=False)
 
 #Turn each training data array into numpy arrays of numpy arrays
 training_data = [np.asarray(item) for item in training_data]
@@ -91,13 +90,67 @@ training_data = np.array(training_data)
 training_labels = [np.asarray(item) for item in training_labels]
 training_labels = np.array(training_labels)
 
+#Upsample the data to amplify lesser classes
+df = pd.DataFrame(training_data)
+df['label'] = training_labels
+
+#Get the size of the largest class (so I know how much to upsample by)
+max_label = df['label'].value_counts().idxmax()
+max_number = df['label'].value_counts()[max_label]
+
+#Create an upsampling space, initially fill it with the largest category
+df_oversampled = df[df['label']==max_label]
+
+#For each smaller class, oversample it and add to the oversampling space
+for value in range(df['label'].nunique()):
+    if value != max_label:
+        df_class = df[df['label']==value]
+        df_class_over = df_class.sample(max_number, replace=True)
+        df_class_over = pd.DataFrame(df_class_over)
+        df_oversampled = pd.concat([df_oversampled, df_class_over])
+
+#Convert the upsampled data to training and labelled data
+training_labels = df_oversampled['label'].tolist()
+training_data = df_oversampled.drop(columns='label').to_numpy()
+#Aaaaand we're done upsampling! Hooray!
+
 #Resize training data to fit CNN input layer and convert labels to one-hot encoding
 training_data = training_data[:, :, np.newaxis]
-training_labels = to_categorical(training_labels,num_classes=len(class_names))
+training_labels = to_categorical(training_labels)
 
-#NOTE: Still to do oversampling
+if two_leads == 0:
+    input_shape = 430
+else:
+    input_shape = 860
 
-#Turn each validation data array into numpy arrays of numpy arrays
+#embedding_vecor_length = 500
+model = Sequential()
+#model.add(Embedding(200, embedding_vecor_length, input_length=max_length))
+model.add(Bidirectional(LSTM(100, return_sequences=False, input_shape=(input_shape, 1))))
+# model.add(Dropout(0.2))
+# model.add(LSTM(60))
+# model.add(Dropout(0.2))
+model.add(Dense(len(class_names), activation='sigmoid'))
+
+epochs = 10
+
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+history = model.fit(training_data, training_labels, epochs=epochs, batch_size=200, validation_split=0.1)
+
+print("History Keys")
+print(history.history.keys())
+
+print("Model Summary")
+print(model.summary())
+
+print("Evaluating....")
+
+del training_data
+del training_labels
+
+([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "/validation_set/",save_unnormalised=True)
+print("Finished reading validation file")
+
 validation_data = [np.asarray(item) for item in validation_data]
 validation_data = np.array(validation_data)
 
@@ -107,39 +160,16 @@ validation_labels = np.array(validation_labels)
 
 #Resize validation data to fit CNN input layer and convert labels to one-hot encoding
 validation_data = validation_data[:, :, np.newaxis]
-validation_labels = to_categorical(validation_labels,num_classes=len(class_names))
+validation_labels = to_categorical(validation_labels)
 
-#embedding_vecor_length = 500
-model = Sequential()
-#model.add(Embedding(200, embedding_vecor_length, input_length=max_length))
-model.add(Bidirectional(LSTM(100, return_sequences=False, input_shape=(2600, 1))))
-# model.add(Dropout(0.2))
-# model.add(LSTM(60))
-# model.add(Dropout(0.2))
-model.add(Dense(len(class_names), activation='sigmoid'))
+test_loss, test_acc = model.evaluate(validation_data, validation_labels)
+predicted_labels = model.predict(validation_data)
+    
+if not os.path.exists("./saved_models/"):
+    os.makedirs("./saved_models/")
+if not os.path.exists("./saved_models/lstm/"):
+    os.makedirs("./saved_models/lstm/")
 
-epochs = 1
+model.save(".\\saved_models\\lstm\\lstm_model")
 
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-model.fit(training_data, training_labels, epochs=epochs, batch_size=200)
-print(model.summary())
-# Final evaluation of the model
-scores = model.evaluate(validation_data, validation_labels, verbose=1)
-print("Accuracy: %.2f%%" % (scores[1]*100))
-
-predictions = model.predict(validation_data)
-
-one_hot_predictions = []
-for value in predictions:
-    one_hot_predictions.append(round(value[0]))
-
-df = pd.DataFrame(one_hot_predictions)
-print(df[0].value_counts())
-
-predicted_encoded = np.argmax(predictions, axis=1)
-actual_encoded = np.argmax(validation_labels, axis=1)
-
-recall, precision, f1_score = plot_classification_report(actual_encoded, predicted_encoded, classes=class_names)
-print("Recall = "+str(recall))
-print("Precision = "+str(precision))
-print("F1 score = "+str(f1_score))
+analyse_results(history, validation_data, validation_labels, predicted_labels, "lstm", base_filename, unnormalised_validation, test_acc)

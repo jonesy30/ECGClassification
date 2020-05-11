@@ -13,6 +13,8 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
     labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
     label_names = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','P':'Paced'}
 
+    
+
     if history != None:
 
         if 'accuracy' in history.history.keys():
@@ -53,7 +55,7 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
         predicted_values.append(predicted_value)
 
         actual = validation_labels[i]
-        if "cnn" in model_type:
+        if ("cnn" in model_type) or ("lstm" in model_type.lower()):
             actual = list(validation_labels[i]).index(1)
         elif "fully connected" in model_type.lower():
             actual = validation_labels[i]
@@ -74,6 +76,8 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
         file_location = base_filename+"/cnn/"
     elif "fully connected" in model_type.lower():
         file_location = base_filename+"/fully_connected/"
+    elif "lstm" in model_type.lower():
+        file_location = base_filename+"/lstm/"
     save_incorrect_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, file_location)
 
     accuracy = correct/tested
@@ -98,7 +102,7 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
     predicted_encoded = predicted_labels
     actual_encoded = validation_labels
 
-    if "cnn" in model_type:
+    if ("cnn" in model_type) or ("lstm" in model_type):
         # show the inputs and predicted outputs
         predicted_encoded = np.argmax(predicted_labels, axis=1)
         actual_encoded = np.argmax(validation_labels, axis=1)

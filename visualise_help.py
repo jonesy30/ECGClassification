@@ -7,8 +7,8 @@ import numpy as np
 
 beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','/':'Paced'}
 beat_lengths = []
-#base_filename = "./external_original/st_petersburg/files/"
-base_filename = "./mit_bih/"
+base_filename = "./external_original/st_petersburg/files/"
+#base_filename = "./mit_bih/"
 
 above_430 = 0
 within_430 = 0
@@ -56,7 +56,7 @@ for file in glob.glob(base_filename+"*.atr"):
 
             complete_beats = ecg[start_recording:end_recording]
             beat_lengths.append(len(complete_beats))
-            if len(complete_beats) > 430:
+            if len(complete_beats) > 307:
                 above_430 += 1
             else:
                 within_430 += 1
@@ -64,6 +64,9 @@ for file in glob.glob(base_filename+"*.atr"):
                 max_length = len(complete_beats)
                 max_file = file + ", beat "+str(index)
 
+
+if "st_petersburg" in base_filename:
+    beat_lengths = [1.401 * x for x in beat_lengths]
 
 # matplotlib histogram
 plt.hist(beat_lengths, color = 'blue', edgecolor = 'black',

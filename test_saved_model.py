@@ -9,6 +9,7 @@ from analyse_ml_results import analyse_results
 #from cnn_classification import read_data
 
 class_names = ['A','E','j','L','N','P','R','V']
+two_leads = 0
 
 def normalize(ecg_signal, filename):
     max_value = max(ecg_signal)
@@ -37,12 +38,13 @@ def read_data(foldername,save_unnormalised=False):
         f = open(str(foldername+file), "r")
         found_data = []
         label = ""
-        label_text = ""
         for i,line in enumerate(f):
             line = line.replace("\n","")
             #ECG signal stored in first line separated by spaces
             if i < 1:
                 line_segments = line.split()
+                if two_leads == 0:
+                    line_segments = line_segments[:430]
                 for i,item in enumerate(line_segments):
                     line_segments[i] = float(item)
 
@@ -50,8 +52,6 @@ def read_data(foldername,save_unnormalised=False):
                     found_data.append(item)
             #label stored on second line
             else:
-                label_text = line
-                #if label_text != "OTHER":
                 if str(line) not in class_names:
                     label = ""
                 else:
@@ -71,12 +71,12 @@ def read_data(foldername,save_unnormalised=False):
 
     return data, labels
 
-model_location = 'saved_models\\cnn\\cnn_model'
+model_location = 'saved_models\\cnn_hannun\\cnn_model'
 new_model = tf.keras.models.load_model(model_location)
 
 print(new_model.summary())
 
-base_filename = "./external_validation_data/st_petersburg/network_data/validation_set/"
+base_filename = "./external_validation_data/st_petersburg/network_data/training_set/"
 #base_filename + "network_data/validation_set/"
 #"hannun_validation_data/""
 ([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename,save_unnormalised=True)
@@ -94,7 +94,7 @@ validation_labels = np.array(validation_labels)
 
 #Resize validation data to fit CNN input layer and convert labels to one-hot encoding
 
-if "cnn" in model_location:
+if ("cnn" in model_location) or ("lstm" in model_location):
     validation_data = validation_data[:, :, np.newaxis]
     validation_labels = to_categorical(validation_labels,num_classes=len(class_names))
 
@@ -106,7 +106,13 @@ print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
 predicted_labels = new_model.predict(validation_data)
 
 print(validation_labels[:50])
-analyse_results(None, validation_data, validation_labels, predicted_labels, "cnn", base_filename, unnormalised_validation, acc)
-    
+if "cnn" in model_location:
+    analyse_results(None, validation_data, validation_labels, predicted_labels, "cnn", base_filename, unnormalised_validation, acc)
+elif "lstm" in model_location:
+    analyse_results(None, validation_data, validation_labels, predicted_labels, "lstm", base_filename, unnormalised_validation, acc)
+elif "fully_connected" in model_location:
+    analyse_results(None, validation_data, validation_labels, predicted_labels, "fully_connected", base_filename, unnormalised_validation, acc)
+else:
+    print("NEW MODEL - UPDATE SCRIPT TO MATCH")
 
 #print(new_model.predict(test_images).shape)

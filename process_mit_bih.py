@@ -2,6 +2,7 @@ import wfdb
 import matplotlib.pyplot as plt
 import glob, os
 import numpy as np
+from scipy import signal
 
 beat_replacement = {'/':'P'} #since you can't have / as a foldername!
 beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','/':'Paced'}
@@ -80,6 +81,10 @@ def get_full_ecg(filenumber, base_filename="mit_bih/"):
 
             complete_beat_1 = ecg_lead_1[start_recording:end_recording]
             complete_beat_2 = ecg_lead_2[start_recording:end_recording]
+
+            if "st_petersburg" in base_filename:
+                complete_beat_1 = signal.resample(complete_beat_1,int(round(len(complete_beat_1)*1.401)))
+                complete_beat_2 = signal.resample(complete_beat_2,int(round(len(complete_beat_2)*1.401)))
 
             if len(complete_beat_1) <= max_length:
                 complete_beat_1 = np.pad(complete_beat_1, (0, max_length - len(complete_beat_1)), 'constant')

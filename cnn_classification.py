@@ -18,7 +18,7 @@ import itertools
 from plot_confusion_matrix import plot_confusion_matrix
 import time
 from classification_report import plot_classification_report
-from visualise_incorrect_predictions import save_incorrect_predictions
+from visualise_incorrect_predictions import save_predictions
 from analyse_ml_results import analyse_results
 from sklearn.utils import resample
 
@@ -160,67 +160,67 @@ else:
     input_shape = 860
 
 #Build the intial model
-model = keras.Sequential([
-    keras.layers.InputLayer(input_shape=[input_shape,1])
-    #keras.layers.Lambda(lambda v: tf.cast(tf.spectral.fft(tf.cast(v,dtype=tf.complex64)),tf.float32))
-    #Dropout(0.2)
-    #keras.layers.Conv1D(kernel_size=10, filters=128, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
-    #keras.layers.AveragePooling1D(pool_size=2, strides=1,padding="same")
-])
-#Add extra labels
+# model = keras.Sequential([
+#     keras.layers.InputLayer(input_shape=[input_shape,1])
+#     #keras.layers.Lambda(lambda v: tf.cast(tf.spectral.fft(tf.cast(v,dtype=tf.complex64)),tf.float32))
+#     #Dropout(0.2)
+#     #keras.layers.Conv1D(kernel_size=10, filters=128, strides=4, use_bias=True, activation=keras.layers.LeakyReLU(alpha=0.3), kernel_initializer='VarianceScaling'),
+#     #keras.layers.AveragePooling1D(pool_size=2, strides=1,padding="same")
+# ])
+# #Add extra labels
 
-model.add(keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, input_shape=(input_shape,1), use_bias=True, kernel_initializer='VarianceScaling'))
-model.add(keras.layers.LeakyReLU(alpha=0.3))
-model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1, padding="same"))
-model.add(Dropout(0.5))
-
-model.add(keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, use_bias=True, kernel_initializer='VarianceScaling'))
-model.add(keras.layers.LeakyReLU(alpha=0.3))
-model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1, padding="same"))
-model.add(Dropout(0.5))
-
-#model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1))
-model.add(keras.layers.Flatten())
-model.add(keras.layers.Dense(len(class_names), activation='softmax'))
-
-#Structure from Hannun et al
-# model = keras.Sequential()
-
-# #block 1
-# model.add(keras.layers.InputLayer(input_shape=[input_shape,1]))
-# model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, input_shape=(input_shape,1), use_bias=True, kernel_initializer='VarianceScaling'))
-# model.add(keras.layers.BatchNormalization())
+# model.add(keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, input_shape=(input_shape,1), use_bias=True, kernel_initializer='VarianceScaling'))
 # model.add(keras.layers.LeakyReLU(alpha=0.3))
+# model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1, padding="same"))
+# model.add(Dropout(0.5))
 
-# #block 2
-# model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
-# model.add(keras.layers.BatchNormalization())
+# model.add(keras.layers.Conv1D(kernel_size=10, filters=64, strides=4, use_bias=True, kernel_initializer='VarianceScaling'))
 # model.add(keras.layers.LeakyReLU(alpha=0.3))
-# model.add(keras.layers.Dropout(0.2))
+# model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1, padding="same"))
+# model.add(Dropout(0.5))
 
-
-# #block 3
-# for i in range(12):
-#     filters = 32*(2**(i//4))
-#     print("Filter size = "+str(filters))
-#     model.add(keras.layers.Conv1D(kernel_size=16, filters=filters, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
-#     model.add(keras.layers.BatchNormalization())
-#     model.add(keras.layers.LeakyReLU(alpha=0.3))
-#     model.add(keras.layers.Conv1D(kernel_size=16, filters=filters, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
-#     model.add(keras.layers.BatchNormalization())
-#     model.add(keras.layers.LeakyReLU(alpha=0.3))
-#     model.add(Dropout(0.2))
-
-# #block 4
-# model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
-# model.add(keras.layers.BatchNormalization())
-# model.add(keras.layers.LeakyReLU(alpha=0.3))
+# #model.add(keras.layers.AveragePooling1D(pool_size=2, strides=1))
 # model.add(keras.layers.Flatten())
 # model.add(keras.layers.Dense(len(class_names), activation='softmax'))
 
+#Structure from Hannun et al
+model = keras.Sequential()
+
+#block 1
+model.add(keras.layers.InputLayer(input_shape=[input_shape,1]))
+model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, input_shape=(input_shape,1), use_bias=True, kernel_initializer='VarianceScaling'))
+model.add(keras.layers.BatchNormalization())
+model.add(keras.layers.LeakyReLU(alpha=0.3))
+
+#block 2
+model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
+model.add(keras.layers.BatchNormalization())
+model.add(keras.layers.LeakyReLU(alpha=0.3))
+model.add(keras.layers.Dropout(0.2))
+
+
+#block 3
+for i in range(12):
+    filters = 32*(2**(i//4))
+    print("Filter size = "+str(filters))
+    model.add(keras.layers.Conv1D(kernel_size=16, filters=filters, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.LeakyReLU(alpha=0.3))
+    model.add(keras.layers.Conv1D(kernel_size=16, filters=filters, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.LeakyReLU(alpha=0.3))
+    model.add(Dropout(0.2))
+
+#block 4
+model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
+model.add(keras.layers.BatchNormalization())
+model.add(keras.layers.LeakyReLU(alpha=0.3))
+model.add(keras.layers.Flatten())
+model.add(keras.layers.Dense(len(class_names), activation='softmax'))
+
 #MAGIC NUMBERS
 verbose = 1
-epochs = 30
+epochs = 10
 batch_size = 128
 
 #Build and fit the model
@@ -263,9 +263,9 @@ print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
 
 if not os.path.exists("./saved_models/"):
     os.makedirs("./saved_models/")
-if not os.path.exists("./saved_models/cnn/"):
-    os.makedirs("./saved_models/cnn/")
+if not os.path.exists("./saved_models/cnn_hannun/"):
+    os.makedirs("./saved_models/cnn_hannun/")
 
-model.save(".\\saved_models\\cnn\\cnn_model")
+model.save(".\\saved_models\\cnn_hannun\\cnn_model")
 
 analyse_results(history, validation_data, validation_labels, predicted_labels, "cnn", base_filename, unnormalised_validation, test_acc)

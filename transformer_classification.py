@@ -301,16 +301,16 @@ validation_labels = to_categorical(validation_labels, num_classes=len(class_name
 
 print("Training data shape")
 print(training_data.shape)
+sys.exit()
 
 NUM_LAYERS = 2
-D_MODEL = 1300
+D_MODEL = training_data.shape[2]
 NUM_HEADS = 4
 UNITS = 1024
 DROPOUT = 0.1
-TIME_STEPS= 1
-OUTPUT_SIZE=len(class_names)
+TIME_STEPS = training_data.shape[1]
+OUTPUT_SIZE = len(class_names)
 EPOCHS = 10
-EXPERIMENTS=10
 
 model = transformer(time_steps=TIME_STEPS,
     num_layers=NUM_LAYERS,

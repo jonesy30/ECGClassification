@@ -88,7 +88,7 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
         file_location = base_filename+"/fully_connected/"
     elif "lstm" in model_type.lower():
         file_location = base_filename+"/lstm/"
-    save_incorrect_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, file_location)
+    save_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, file_location)
 
     accuracy = correct/tested
 

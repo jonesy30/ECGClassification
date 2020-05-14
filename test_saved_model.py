@@ -9,7 +9,7 @@ from analyse_ml_results import analyse_results
 #from cnn_classification import read_data
 
 class_names = ['A','E','j','L','N','P','R','V']
-two_leads = 0
+two_leads = 1
 
 def normalize(ecg_signal, filename):
     max_value = max(ecg_signal)
@@ -71,12 +71,15 @@ def read_data(foldername,save_unnormalised=False):
 
     return data, labels
 
-model_location = 'saved_models\\cnn_hannun\\cnn_model'
+model_location = 'saved_models\\cnn_hannund\\cnn_model'
 new_model = tf.keras.models.load_model(model_location)
 
 print(new_model.summary())
 
-base_filename = "./external_validation_data/st_petersburg/network_data/training_set/"
+#base_filename = "./external_validation_data/st_petersburg/network_data/training_set/"
+
+base_filename = "./mit_bih_processed_data_two_leads/network_data/validation_set/"
+
 #base_filename + "network_data/validation_set/"
 #"hannun_validation_data/""
 ([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename,save_unnormalised=True)

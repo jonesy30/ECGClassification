@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import glob, os
 import numpy as np
 from scipy import signal
+from scipy.signal import resample
 
 beat_replacement = {'/':'P'} #since you can't have / as a foldername!
 beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','/':'Paced'}
@@ -154,6 +155,7 @@ def process_files(base_filename="mit_bih/"):
                 else:
                     destination_filename = "external_validation_data/st_petersburg/"
                     write_to_file(signal, beat_label, write_counter, base_filename=destination_filename)
+                    #write_to_file(signal, beat_label, write_counter)
                 write_counter += 1
         print("Max = "+str(current_max))
         print("Max file = "+str(biggest_file))
@@ -167,6 +169,31 @@ if __name__ == "__main__":
     #process_files()
     process_files(base_filename="external_original/st_petersburg/files/")
     #plot_ecg(232)
+
+    # for f in glob.glob("./mit_bih_two_second_samples/P/*.txt"):
+    # #f = "./mit_bih_two_second_samples/N/ecg_10007.txt"
+    #     file = open(f,"r")
+    #     print(f)
+
+    #     ecg_plot = file.read()
+    #     ecg_plot = ecg_plot.strip()
+    #     ecg = ecg_plot.split(" ")
+    #     ecg = [int(n) for n in ecg]
+
+    #     lead_one = ecg[:720]
+    #     lead_two = ecg[720:]
+
+    #     plt.subplot(211)
+
+    #     plt.plot(lead_one)
+    #     plt.title("Lead One")
+
+    #     plt.subplot(212)
+
+    #     plt.plot(lead_two)
+    #     plt.title("Lead Two")
+
+    #     plt.show()
 
     #plot_ecg("I01",base_filename="./external_original/st_petersburg/files/",title="St Petersburg INCART Dataset")
 

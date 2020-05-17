@@ -4,13 +4,17 @@ import numpy as np
 import pandas as pd 
 import os
 import matplotlib.pyplot as plt
-import tensorflow as tf
 from tensorflow.keras.utils import to_categorical
+from analyse_ml_results import analyse_results
+import os
+import tensorflow as tf
 
 class_names = ['A','E','j','L','N','P','R','V']
 labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
 
 label_names = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','P':'Paced'}
+
+two_leads = 0
 
 class MultiHeadAttention(tf.keras.layers.Layer):
 
@@ -187,7 +191,7 @@ def transformer(time_steps,
     #We predict our class
     outputs = tf.keras.layers.Dense(units=output_size,use_bias=True,activation='softmax', name="outputs")(outputs)
 
-    return tf.keras.Model(inputs=[inputs], outputs=outputs, name='audio_class')
+    return tf.keras.Model(inputs=[inputs], outputs=outputs)
 
 def create_padding_mask(seq):
     seq = tf.cast(tf.math.equal(seq, 0), tf.float32)
@@ -227,21 +231,20 @@ def read_data(foldername,save_unnormalised=False):
         f = open(str(foldername+file), "r")
         found_data = []
         label = ""
-        label_text = ""
         for i,line in enumerate(f):
             line = line.replace("\n","")
             #ECG signal stored in first line separated by spaces
             if i < 1:
                 line_segments = line.split()
 
+                if two_leads == 0:
+                    line_segments = line_segments[:430]
                 line_segments = [float(x) for x in line_segments]
 
                 for item in line_segments:
                     found_data.append(item)
             #label stored on second line
             else:
-                label_text = line
-                #if label_text != "OTHER":
                 index = class_names.index(line)
                 label = index
         f.close()
@@ -272,10 +275,14 @@ def scaled_dot_product_attention(query, key, value, mask):
 
     return tf.matmul(attention_weights, value)
 
-base_filename = "./mit_bih_processed_data/"
+base_filename = "./mit_bih_processed_data_two_leads/"
 
-(training_data, training_labels) = read_data(base_filename + "network_data_subset/training_set/")
-(validation_data, validation_labels) = read_data(base_filename + "network_data_subset/validation_set/")
+(training_data, training_labels) = read_data(base_filename + "network_data/validation_set/")
+#(validation_data, validation_labels) = read_data(base_filename + "network_data/validation_set/")
+#([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
+validation_data = training_data
+validation_labels = training_labels
+unnormalised_validation = validation_data
 
 training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
@@ -301,7 +308,6 @@ validation_labels = to_categorical(validation_labels, num_classes=len(class_name
 
 print("Training data shape")
 print(training_data.shape)
-sys.exit()
 
 NUM_LAYERS = 2
 D_MODEL = training_data.shape[2]
@@ -323,11 +329,20 @@ model = transformer(time_steps=TIME_STEPS,
 
 model.compile(optimizer=tf.keras.optimizers.Adam(0.000001), loss='categorical_crossentropy', metrics=['accuracy'])
 
-history=model.fit(training_data,training_labels, epochs=EPOCHS, validation_data=(validation_data, validation_labels))
+history = model.fit(training_data,training_labels, epochs=EPOCHS, validation_data=(validation_data, validation_labels))
 
 accuracy = max(history.history['val_accuracy'])
 
 print("Accuracy = "+str(accuracy))
-    
-del model
-del history
+
+test_loss, test_acc = model.evaluate(validation_data, validation_labels)
+predicted_labels = model.predict(validation_data)
+
+if not os.path.exists("./saved_models/"):
+    os.makedirs("./saved_models/")
+if not os.path.exists("./saved_models/transformer/"):
+    os.makedirs("./saved_models/transformer/")
+
+model.save(".\\saved_models\\transformer\\transformer_model")
+
+analyse_results(history, validation_data, validation_labels, predicted_labels, "transformer", base_filename, unnormalised_validation, test_acc)

@@ -12,9 +12,6 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 def analyse_results(history, validation_data, validation_labels, predicted_labels, model_type, base_filename, unnormalised_validation, test_acc):
     class_names = ['A','E','j','L','N','P','R','V']
     labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
-    label_names = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','P':'Paced'}
-
-    
 
     if history != None:
 
@@ -30,6 +27,7 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper left')
         plt.figure()
+        
         # summarize history for loss
         plt.plot(history.history['loss'])
         plt.plot(history.history['val_loss'])
@@ -60,7 +58,7 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
         predicted_values.append(predicted_value)
 
         actual = validation_labels[i]
-        if ("cnn" in model_type) or ("lstm" in model_type.lower()):
+        if ("cnn" in model_type) or ("lstm" in model_type.lower()) or ("transformer" in model_type.lower()):
             actual = list(validation_labels[i]).index(1)
         elif "fully connected" in model_type.lower():
             actual = validation_labels[i]
@@ -88,6 +86,8 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
         file_location = base_filename+"/fully_connected/"
     elif "lstm" in model_type.lower():
         file_location = base_filename+"/lstm/"
+    elif "transformer" in model_type.lower():
+        file_location = base_filename+"/transformer/"
     save_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, file_location)
 
     accuracy = correct/tested
@@ -112,7 +112,7 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
     predicted_encoded = predicted_labels
     actual_encoded = validation_labels
 
-    if ("cnn" in model_type) or ("lstm" in model_type):
+    if ("cnn" in model_type) or ("lstm" in model_type) or ("transformer" in model_type):
         # show the inputs and predicted outputs
         predicted_encoded = np.argmax(predicted_labels, axis=1)
         actual_encoded = np.argmax(validation_labels, axis=1)
@@ -123,8 +123,10 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
 
     #Plot the confusion matrix of the expected and predicted classes
 
+    m_f_1 = f1_score(actual_encoded, predicted_encoded, average='macro')
+
     matrix = confusion_matrix(actual_encoded, predicted_encoded, labels=np.arange(0,len(class_names)-1,1), normalize='all')
-    plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix ("+model_type+"), Accuracy = "+str(round(test_acc*100,2))+"%")
+    plot_confusion_matrix(matrix, classes=labels, normalize=True, title="Confusion Matrix ("+model_type+"), Macro F1 = "+str(round(m_f_1*100,2))+"%")
 
     plot_classification_report(actual_encoded, predicted_encoded, labels, show_plot=False)
 
@@ -142,7 +144,7 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
     plt.bar(class_names, accuracy_of_predictions)
     plt.xticks(class_names, fontsize=7, rotation=30)
     plt.title(model_type.upper()+"\nOverall Accuracy = "+str(round(test_acc*100,2))+"%")
-    x1,x2,y1,y2 = plt.axis()
+    x1,x2,_,_ = plt.axis()
     plt.axis((x1,x2,0,100))
     plt.ylabel("Accuracy of predictions (%)")
     plt.xlabel("Condition")

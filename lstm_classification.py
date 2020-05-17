@@ -132,7 +132,7 @@ model.add(Bidirectional(LSTM(100, return_sequences=False, input_shape=(input_sha
 # model.add(Dropout(0.2))
 model.add(Dense(len(class_names), activation='sigmoid'))
 
-epochs = 10
+epochs = 20
 
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 history = model.fit(training_data, training_labels, epochs=epochs, batch_size=200, validation_split=0.1)

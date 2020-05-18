@@ -13,8 +13,8 @@ from numpy import fft
 #destination_folder = "./network_data_unfiltered"
 #base_folder = "./split_processed_data"
 destination_folder = "./network_data"
-base_folder = "./external_validation_data/st_petersburg/"
-#base_folder = "./mit_bih_two_second_samples/"
+#base_folder = "./external_validation_data/st_petersburg/"
+base_folder = "./mit_bih_processed_data_two_leads/"
 binary_file = 0
 leave_one_out_validation = 0
 

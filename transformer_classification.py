@@ -4,10 +4,10 @@ import numpy as np
 import pandas as pd 
 import os
 import matplotlib.pyplot as plt
+import tensorflow as tf
 from tensorflow.keras.utils import to_categorical
 from analyse_ml_results import analyse_results
-import os
-import tensorflow as tf
+import sys
 
 class_names = ['A','E','j','L','N','P','R','V']
 labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
@@ -231,6 +231,7 @@ def read_data(foldername,save_unnormalised=False):
         f = open(str(foldername+file), "r")
         found_data = []
         label = ""
+        label_text = ""
         for i,line in enumerate(f):
             line = line.replace("\n","")
             #ECG signal stored in first line separated by spaces
@@ -245,6 +246,8 @@ def read_data(foldername,save_unnormalised=False):
                     found_data.append(item)
             #label stored on second line
             else:
+                label_text = line
+                #if label_text != "OTHER":
                 index = class_names.index(line)
                 label = index
         f.close()
@@ -277,12 +280,8 @@ def scaled_dot_product_attention(query, key, value, mask):
 
 base_filename = "./mit_bih_processed_data_two_leads/"
 
-(training_data, training_labels) = read_data(base_filename + "network_data/validation_set/")
-#(validation_data, validation_labels) = read_data(base_filename + "network_data/validation_set/")
-#([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
-validation_data = training_data
-validation_labels = training_labels
-unnormalised_validation = validation_data
+(training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
+([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
 
 training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
@@ -311,7 +310,7 @@ print(training_data.shape)
 
 NUM_LAYERS = 2
 D_MODEL = training_data.shape[2]
-NUM_HEADS = 4
+NUM_HEADS = 5
 UNITS = 1024
 DROPOUT = 0.1
 TIME_STEPS = training_data.shape[1]
@@ -331,18 +330,18 @@ model.compile(optimizer=tf.keras.optimizers.Adam(0.000001), loss='categorical_cr
 
 history = model.fit(training_data,training_labels, epochs=EPOCHS, validation_data=(validation_data, validation_labels))
 
-accuracy = max(history.history['val_accuracy'])
-
-print("Accuracy = "+str(accuracy))
-
-test_loss, test_acc = model.evaluate(validation_data, validation_labels)
-predicted_labels = model.predict(validation_data)
-
 if not os.path.exists("./saved_models/"):
     os.makedirs("./saved_models/")
 if not os.path.exists("./saved_models/transformer/"):
     os.makedirs("./saved_models/transformer/")
 
 model.save(".\\saved_models\\transformer\\transformer_model")
+
+accuracy = max(history.history['val_accuracy'])
+
+test_loss, test_acc = model.evaluate(validation_data, validation_labels)
+predicted_labels = model.predict(validation_data)
+
+print("Accuracy = "+str(accuracy))
 
 analyse_results(history, validation_data, validation_labels, predicted_labels, "transformer", base_filename, unnormalised_validation, test_acc)

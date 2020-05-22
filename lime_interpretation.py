@@ -25,6 +25,41 @@ from ecg_feature_extraction import feature_extract_ecg
 class_names = ['A','E','j','L','N','P','R','V']
 two_leads = 0
 
+
+def predict_fn(incoming_permutation):
+    # ecg = [np.asarray(item) for item in ecg]
+    # ecg = np.array(ecg)
+
+    # ecg = ecg[:, np.newaxis]
+    # ecg = np.expand_dims(ecg, axis=0)
+
+    # print(len(incoming_permutation[0]))
+
+    new_ecgs = []
+
+    for permutation in incoming_permutation:
+        new_ecg = ecg_original.copy()
+        for permutation_index,item in enumerate(permutation):
+            
+            if item == 0:
+                start_index = permutation_index*block_length
+                end_index = (permutation_index+1)*block_length
+                #start_index, end_index = masked_blocks[permutation_index]
+
+                new_ecg[start_index:end_index] = [0]*(end_index-start_index)
+        new_ecgs.append(new_ecg)
+
+    new_ecgs = [np.asarray(item) for item in new_ecgs]
+    new_ecgs = np.array(new_ecgs)
+
+    new_ecgs = new_ecgs[:, :, np.newaxis]
+
+    predictions = model.predict_proba(new_ecgs)
+    for index,prediction in enumerate(predictions):
+        predictions[index] = [int(value) for value in prediction]
+
+    return predictions
+
 def normalize(ecg_signal, filename):
     max_value = max(ecg_signal)
     min_value = min(ecg_signal)
@@ -43,47 +78,37 @@ def normalize(ecg_signal, filename):
 
     return [np.float32(a) for a in normalised]
 
-#Function which reads ECG data and labels from each file in folder
-def read_data(foldername,save_unnormalised=False):
-    
-    data = []
-    labels = []
-    unnormalised = []
+def read_file_for_feature_extraction(file_string, r_index=1):
+    f = open(file_string, "r")
+    found_data = []
+    r_value = 0
 
-    #for each file in corresponding folder
-    for file in os.listdir(foldername):
-        f = open(str(foldername+file), "r")
-        found_data = []
-        label = ""
-        for i,line in enumerate(f):
-            line = line.replace("\n","")
-            #ECG signal stored in first line separated by spaces
-            if i < 1:
-                line_segments = line.split()
+    for i,line in enumerate(f):
+        line = line.replace("\n","")
+        #ECG signal stored in first line separated by spaces
+        if i < 1:
+            line_segments = line.split()
 
-                if two_leads == 0:
-                    line_segments = line_segments[:430]
-                line_segments = [float(x) for x in line_segments]
+            if r_index == 1:
+                r_value = line_segments[-1]
+                del line_segments[-1]
 
-                for item in line_segments:
-                    found_data.append(item)
-            #label stored on second line
-            else:
-                index = class_names.index(line)
-                label = index
-        f.close()
+            line_segments = [float(x) for x in line_segments]
 
-        #if label exists, store in trainng validation data
-        if label != "":
-            unnormalised.append(found_data)
-            normalized_data = normalize(found_data, file)
-            data.append(normalized_data)
-            labels.append(label)
-    
-    if save_unnormalised == True:
-        return [data, unnormalised], labels
+            for item in line_segments:
+                found_data.append(item)
+    f.close()
 
-    return data, labels
+    found_data_lead_1 = found_data[:430]
+    found_data_lead_2 = found_data[430:]
+
+    found_data_lead_1 = np.trim_zeros(found_data_lead_1)
+    found_data_lead_2 = np.trim_zeros(found_data_lead_2)
+
+    if r_index == 1:
+        return found_data_lead_1,found_data_lead_2, r_value
+
+    return found_data_lead_1,found_data_lead_2
 
 model_location = 'saved_models\\cnn\\cnn_model'
 model = tf.keras.models.load_model(model_location)
@@ -92,13 +117,19 @@ print(model.summary())
 
 #old normal file: 77001
 #old arrthmia file: 306
-f = open("./mit_bih_processed_data_two_leads/network_data/training_set/ecg_226.txt", "r")
+filename = "./mit_bih_processed_data_two_leads_r_marker/network_data/training_set/ecg_227.txt"
+f = open(filename, "r")
 ecg = []
 for i,line in enumerate(f):
     line = line.replace("\n","")
     #ECG signal stored in first line separated by spaces
     if i < 1:
         line_segments = line.split()
+
+        if "r_marker" in filename:
+            r_value = line_segments[-1]
+            del line_segments[-1]
+
         for i,item in enumerate(line_segments):
             line_segments[i] = float(item)
 
@@ -108,6 +139,7 @@ f.close()
 
 # plt.show()
 ecg_original = ecg.copy()
+
 
 ecg = [np.asarray(item) for item in ecg]
 ecg = np.array(ecg)
@@ -172,40 +204,6 @@ permutation_blocks = np.array(permutation_blocks)
 #     plt.title(permutation)
 #     plt.show()
 
-def predict_fn(incoming_permutation):
-    # ecg = [np.asarray(item) for item in ecg]
-    # ecg = np.array(ecg)
-
-    # ecg = ecg[:, np.newaxis]
-    # ecg = np.expand_dims(ecg, axis=0)
-
-    # print(len(incoming_permutation[0]))
-
-    new_ecgs = []
-
-    for permutation in incoming_permutation:
-        new_ecg = ecg_original.copy()
-        for permutation_index,item in enumerate(permutation):
-            
-            if item == 0:
-                start_index = permutation_index*block_length
-                end_index = (permutation_index+1)*block_length
-                #start_index, end_index = masked_blocks[permutation_index]
-
-                new_ecg[start_index:end_index] = [0]*(end_index-start_index)
-        new_ecgs.append(new_ecg)
-
-    new_ecgs = [np.asarray(item) for item in new_ecgs]
-    new_ecgs = np.array(new_ecgs)
-
-    new_ecgs = new_ecgs[:, :, np.newaxis]
-
-    predictions = model.predict_proba(new_ecgs)
-    for index,prediction in enumerate(predictions):
-        predictions[index] = [int(value) for value in prediction]
-
-    return predictions
-
 ecg_original = [np.asarray(item) for item in ecg_original]
 ecg_original = np.array(ecg_original)
 
@@ -251,7 +249,9 @@ for rank,item in enumerate(results_list):
 # for index, item in enumerate(masked_blocks):
 #     print(str(index)+": "+str(item))
 
-ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_original[:430])
+
+ecg_lead_1, ecg_lead_2, r_value = read_file_for_feature_extraction(filename)
+ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_lead_1, r_value)
 
 ax.axvspan(p_wave_start, p_wave_end, alpha=0.5, color='coral')
 ax.axvspan(p_wave_start+430, p_wave_end+430, alpha=0.5, color='coral')

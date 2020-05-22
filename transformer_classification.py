@@ -9,6 +9,8 @@ from tensorflow.keras.utils import to_categorical
 from analyse_ml_results import analyse_results
 import sys
 
+#code taken (and adapted) from https://github.com/facundodeza/transfomer-audio-classification/blob/master/audio_classification_transformer.ipynb
+
 class_names = ['A','E','j','L','N','P','R','V']
 labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
 
@@ -16,6 +18,8 @@ label_names = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNC
 
 two_leads = 0
 
+#this is taken directly from tensorflow website (text transformer tutorial)
+#and the transformer chatbot code
 class MultiHeadAttention(tf.keras.layers.Layer):
 
     def __init__(self, d_model, num_heads, name="multi_head_attention"):
@@ -62,6 +66,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
         return outputs
 
+#taken from tensorflow chatbot tutorial
 class PositionalEncoding(tf.keras.layers.Layer):
 
     def __init__(self, position, d_model):
@@ -89,6 +94,8 @@ class PositionalEncoding(tf.keras.layers.Layer):
     def call(self, inputs):
         return inputs + self.pos_encoding[:, :tf.shape(inputs)[1], :]
 
+#also taken from tensorflow chatbot tutorial
+#includes residual connection
 def encoder_layer(units, d_model, num_heads, dropout,name="encoder_layer"):
     inputs = tf.keras.Input(shape=(None,d_model ), name="inputs")
     padding_mask = tf.keras.Input(shape=(1, 1, None), name="padding_mask")
@@ -113,28 +120,20 @@ def encoder_layer(units, d_model, num_heads, dropout,name="encoder_layer"):
     return tf.keras.Model(
         inputs=[inputs, padding_mask], outputs=outputs, name=name)
     
-def encoder(time_steps,
-            num_layers,
+def encoder(num_layers,
             units,
             d_model,
             num_heads,
             dropout,
-            projection,
             name="encoder"):
     inputs = tf.keras.Input(shape=(None,d_model), name="inputs")
     padding_mask = tf.keras.Input(shape=(1, 1, None), name="padding_mask")
     
-    if projection=='linear':
-        ## We implement a linear projection based on Very Deep Self-Attention Networks for End-to-End Speech Recognition. Retrieved from https://arxiv.org/abs/1904.13377
-        projection=tf.keras.layers.Dense( d_model,use_bias=True, activation='linear')(inputs)
-        print('linear')
-    
-    else:
-        projection=tf.identity(inputs)
-        print('none')
-    
+    projection = tf.identity(inputs)
     projection *= tf.math.sqrt(tf.cast(d_model, tf.float32))
-    projection = PositionalEncoding(time_steps, d_model)(projection)
+    
+    #1D input
+    projection = PositionalEncoding(1, d_model)(projection)
 
     outputs = tf.keras.layers.Dropout(rate=dropout)(projection)
 
@@ -149,18 +148,20 @@ def encoder(time_steps,
     
     return tf.keras.Model(inputs=[inputs, padding_mask], outputs=outputs, name=name)
 
-def transformer(time_steps,
-                num_layers,
+def transformer(num_layers,
                 units,
                 d_model,
                 num_heads,
                 dropout,
                 output_size,
-                projection,
                 name="transformer"):
     inputs = tf.keras.Input(shape=(None,d_model), name="inputs")
-    
-    
+
+    #enc_padding_mask = tf.keras.layers.Embedding(input_dim=d_model, mask_zero=True)(inputs)
+
+    #enc_padding_mask = tf.keras.layers.Lambda(create_padding_mask, output_shape=(1,1,None))
+    #enc_padding_mask = tf.dtypes.cast(tf.math.reduce_sum(inputs,axis=2,keepdims=False), tf.int32)
+
     enc_padding_mask = tf.keras.layers.Lambda(
         create_padding_mask, output_shape=(1, 1, None),
         name='enc_padding_mask')(tf.dtypes.cast(
@@ -172,27 +173,25 @@ def transformer(time_steps,
         axis=2,
         keepdims=False,
         name=None), tf.int32))
-    
 
     enc_outputs = encoder(
-        time_steps=time_steps,
         num_layers=num_layers,
         units=units,
         d_model=d_model,
         num_heads=num_heads,
         dropout=dropout,
-        projection=projection,
         name='encoder'
     )(inputs=[inputs, enc_padding_mask])
 
     #We reshape for feeding our FC in the next step
-    outputs=tf.reshape(enc_outputs,(-1,time_steps*d_model))
+    outputs=tf.reshape(enc_outputs,(-1,d_model))
     
     #We predict our class
     outputs = tf.keras.layers.Dense(units=output_size,use_bias=True,activation='softmax', name="outputs")(outputs)
 
     return tf.keras.Model(inputs=[inputs], outputs=outputs)
 
+#from tensorflow website - ensures model does not treat padding as the input
 def create_padding_mask(seq):
     seq = tf.cast(tf.math.equal(seq, 0), tf.float32)
     
@@ -264,6 +263,7 @@ def read_data(foldername,save_unnormalised=False):
 
     return data, labels
 
+#taken from tensorflow chatbot transformer
 def scaled_dot_product_attention(query, key, value, mask):
     matmul_qk = tf.matmul(query, key, transpose_b=True)
 
@@ -282,6 +282,9 @@ base_filename = "./mit_bih_processed_data_two_leads/"
 
 (training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
 ([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
+
+#training_data = validation_data
+#training_labels = validation_labels
 
 training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
@@ -308,23 +311,20 @@ validation_labels = to_categorical(validation_labels, num_classes=len(class_name
 print("Training data shape")
 print(training_data.shape)
 
-NUM_LAYERS = 2
+NUM_LAYERS = 6
 D_MODEL = training_data.shape[2]
 NUM_HEADS = 5
-UNITS = 1024
-DROPOUT = 0.1
-TIME_STEPS = training_data.shape[1]
+UNITS = 128
+DROPOUT = 0.2
 OUTPUT_SIZE = len(class_names)
-EPOCHS = 10
+EPOCHS = 100
 
-model = transformer(time_steps=TIME_STEPS,
-    num_layers=NUM_LAYERS,
+model = transformer(num_layers=NUM_LAYERS,
     units=UNITS,
     d_model=D_MODEL,
     num_heads=NUM_HEADS,
     dropout=DROPOUT,
-    output_size=OUTPUT_SIZE,  
-    projection='none')
+    output_size=OUTPUT_SIZE)
 
 model.compile(optimizer=tf.keras.optimizers.Adam(0.000001), loss='categorical_crossentropy', metrics=['accuracy'])
 

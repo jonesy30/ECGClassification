@@ -10,9 +10,6 @@ from scipy.signal import butter, lfilter
 from scipy import signal
 import glob
 
-#NOTE: Highpass/lowpass filtering has already been done in the pre_processing step
-#Maybe this is in the wrong place but it's useful for everything so I'm happy with it for now
-
 def butter_highpass(cutoff, fs, order=5):
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq
@@ -56,6 +53,9 @@ def get_little_wave(sub_plot, p_wave = 0):
 
 def get_t_p_wave(ecg_plot, r_max_indexes):
 
+    ecg_plot = butter_highpass_filter(ecg_plot, 2, 360, 2)
+    ecg_plot = butter_lowpass_filter(ecg_plot, 50, 360, 2)
+
     # if len(r_max_indexes) < 3:
     #     print(r_max_indexes)
     #     sub_plot = ecg_plot[:r_max_indexes[0]]
@@ -66,9 +66,6 @@ def get_t_p_wave(ecg_plot, r_max_indexes):
     #upper_bound = len(sub_plot)-lower_bound
 
     #sub_plot = sub_plot[lower_bound:upper_bound]
-    
-    ecg_plot = butter_highpass_filter(ecg_plot, 1.5, 200, 2)
-    ecg_plot = butter_lowpass_filter(ecg_plot, 10, 200, 2)
 
     post_filter_max = np.argmax(ecg_plot)
 
@@ -96,14 +93,21 @@ def get_t_p_wave(ecg_plot, r_max_indexes):
 
     return p_wave[0],p_wave[1],t_wave[0],t_wave[1],p_wave_length,t_wave_length
 
-def read_file(file_string):
+def read_file(file_string, r_index=1):
     f = open(file_string, "r")
     found_data = []
+    r_value = 0
+
     for i,line in enumerate(f):
         line = line.replace("\n","")
         #ECG signal stored in first line separated by spaces
         if i < 1:
             line_segments = line.split()
+
+            if r_index == 1:
+                r_value = line_segments[-1]
+                del line_segments[-1]
+
             line_segments = [float(x) for x in line_segments]
 
             for item in line_segments:
@@ -116,13 +120,124 @@ def read_file(file_string):
     found_data_lead_1 = np.trim_zeros(found_data_lead_1)
     found_data_lead_2 = np.trim_zeros(found_data_lead_2)
 
+    if r_index == 1:
+        return found_data_lead_1,found_data_lead_2, r_value
+
     return found_data_lead_1,found_data_lead_2
 
-def feature_extract_ecg(ecg_plot):
+def feature_extract_ecg(ecg_plot, r_index):
 
-    ecg_plot = np.trim_zeros(ecg_plot)
+    ecg_plot = butter_highpass_filter(ecg_plot, 2, 360, 2)
+    #ecg_plot = butter_lowpass_filter(ecg_plot, 15, 360, 2)
+
+    r_max = r_index
+    r_max_indexes = [r_max]
+
+    r_index = int(r_index)
+
+    sampling_rate = 360
+
+    ecg_plot = butter_highpass_filter(ecg_plot, 2, 360, 2)
+
+    before_r = ecg_plot[:r_index]
+    after_r = ecg_plot[r_index:]
+
+    # plt.plot(ecg_plot)
+    # plt.figure()
+    # plt.plot(before_r)
+    # plt.figure()
+    # plt.plot(after_r)
+
+    #q-wave
+    start_index = r_index - int(sampling_rate*0.1)
+    if start_index < 0:
+        start_index = 0
+    q_wave_subplot = before_r[start_index:]
+    q_point = np.argmin(q_wave_subplot) + start_index
+
+    #s-wave
+    end_index = int(sampling_rate*0.1)
+    s_wave_subplot = after_r[:end_index]
+    s_point = np.argmin(s_wave_subplot) + r_index
+
+    ecg_plot_p = butter_highpass_filter(ecg_plot, 5, 360, 2)
+    ecg_plot_p = butter_lowpass_filter(ecg_plot_p, 50, 360, 2)
+
+    #p-wave
+    p_wave_block = ecg_plot_p[:q_point]
+    p_wave_max = np.argmax(p_wave_block)
+
+    # plt.figure()
+    # plt.plot(p_wave_block)
+    # plt.show()    
+
+    p_wave_start = p_wave_max - int(sampling_rate*0.1)
+    p_wave_start_block = ecg_plot[p_wave_start:p_wave_max]
     
-    r_max = np.argmax(ecg_plot)
+    if len(p_wave_start_block) == 0:
+        p_wave_start = 0
+    else:
+        p_wave_start = np.argmin(p_wave_start_block) + p_wave_start
+
+    p_wave_interval = int(sampling_rate*0.05)
+    p_wave_distance = q_point - p_wave_max
+
+    if p_wave_interval < p_wave_distance:
+        p_wave_end = p_wave_max + p_wave_interval
+    else:
+        p_wave_end = q_point
+
+    p_wave_end_block = ecg_plot_p[p_wave_max:p_wave_end]
+    p_wave_end = np.argmin(p_wave_end_block) + p_wave_max
+
+    #t-wave
+    print(s_point)
+    t_wave_block = ecg_plot[s_point:]
+
+    #t_wave_block = butter_lowpass_filter(t_wave_block, 50, 360, 5)
+
+    t_wave_max = np.argmax(t_wave_block) + s_point
+
+    t_wave_start = t_wave_max - int(sampling_rate*0.2)
+    t_wave_start_block = ecg_plot[t_wave_start:t_wave_max]
+
+    if len(t_wave_start_block) == 0:
+        t_wave_start = s_point
+    else:
+        t_wave_start = np.argmin(t_wave_start_block) + t_wave_start
+
+    t_wave_end = t_wave_max + int(sampling_rate*0.05)
+    t_wave_end_block = ecg_plot[t_wave_max:t_wave_end]
+    t_wave_end = np.argmin(t_wave_end_block) + t_wave_max
+
+    # print("Q")
+    # print(q_point)
+    # print("S")
+    # print(s_point)
+    # print("P")
+    # print(p_wave_max)
+    # print(p_wave_start)
+    # print(p_wave_end)
+    # print("T")
+    # print(t_wave_max)
+    # print(t_wave_start)
+    # print(t_wave_end)
+
+    #plt.show()
+
+    #if __name__ == "__main__":
+    return ecg_plot, p_wave_start, p_wave_end, q_point, r_index, s_point, t_wave_start, t_wave_end
+
+def feature_extract_ecg_old(ecg_plot, r_index):
+
+    print(r_index)
+    plt.plot(ecg_plot)
+    plt.show()
+
+    ecg_plot = butter_highpass_filter(ecg_plot, 2, 360, 2)
+    #ecg_plot = butter_lowpass_filter(ecg_plot, 15, 360, 2)
+
+    r_max = r_index
     r_max_indexes = [r_max]
 
     #Five point filtering
@@ -169,25 +284,33 @@ def feature_extract_ecg(ecg_plot):
 
     derivation = np.gradient(moving_window_integration)
     max = np.amax(derivation)
-    zero_upper_bound = max / 15.0
+    zero_upper_bound = max / 60.0
     zero_lower_bound = zero_upper_bound * -1.0
-
+    
+    #derivation = np.gradient(derivation)
     for index,item in enumerate(derivation):
         if item > 0 and item < zero_upper_bound:
             derivation[index] = 0
         #elif item > zero_lower_bound and item < 0:
         elif item < 0:
-            derivation[index] = 0
-    
-    #derivation = np.gradient(derivation)
+            derivation[index] = 0 
 
     before_r = derivation[:r_max]
-    after_r = derivation[r_max:]
+    after_r = derivation[r_max:]   
+
+    print(r_max)
+
+    plt.plot(ecg_plot)
+    plt.figure()
+    plt.plot(before_r)
+    plt.figure()
+    plt.plot(after_r)
+    plt.show()
 
     q_point = 0
     for index,i in enumerate(reversed(before_r)):
-        if round(i) == 0:
-            q_point = len(before_r) - index
+        if round(i) <= 0:
+            q_point = len(before_r) - index - 1
             break
 
     s_point = 0
@@ -196,145 +319,40 @@ def feature_extract_ecg(ecg_plot):
             s_point = index + r_max
             break
     
-    #Finding the QRS features
-    #Create an array that is 1 where a is nonzero, and pad each end with an extra 0.
-    # isnonzero_q = np.concatenate(([0], (np.asarray(before_r) != 0).view(np.int8), [0]))
-    # print(isnonzero_q)
-    
-    # absdiff_q = np.abs(np.diff(isnonzero_q))
-    # print(absdiff_q)
-    # # Runs start and end where absdiff is 1.
-    # ranges_q = np.where(absdiff_q == 1)[0].reshape(-1, 2)
-
-    # isnonzero_s = np.concatenate(([0], (np.asarray(after_r) != 0).view(np.int8), [0]))
-    # absdiff_s = np.abs(np.diff(isnonzero_s))
-    # # Runs start and end where absdiff is 1.
-    # ranges_s = np.where(absdiff_s == 1)[0].reshape(-1, 2)
-
-    # print("Q = "+str(ranges_q))
-    # print("S = "+str(ranges_s))
-
-    # qrs_starts = []
-    # qrs_ends = []
-
-    # qrs_length = []
-    # for qrs_block in ranges:
-    #     qrs_starts.append(qrs_block[0])
-    #     qrs_ends.append(qrs_block[1])
-    #     length = qrs_block[1] - qrs_block[0]
-    #     qrs_length.append(length)
-
-    # print("Ranges = ")
-    # print(str(ranges))
-    # print("Lengths = ")
-    # print(str(qrs_length))
-    # print()
-
-    # #Finding RR features
-    # max = np.amax(average_squared)
-    # zero_upper_bound = max / 10.0
-    # zero_lower_bound = zero_upper_bound * -1.0
-
-    # average_squared_zeroed = average_squared.copy()
-    # for index,item in enumerate(average_squared):
-    #     if item > 0 and item < zero_upper_bound:
-    #         average_squared_zeroed[index] = 0
-    
-    # for index,item in enumerate(average_squared_zeroed[1:-1]):
-    #     if average_squared_zeroed[index-1] != 0 and average_squared_zeroed[index+1] !=0 and average_squared_zeroed[index] == 0:
-    #         average_squared_zeroed[index] = average_squared_zeroed[index-1]
-        
-    # # Create an array that is 1 where a is nonzero, and pad each end with an extra 0.
-    # isnonzero = np.concatenate(([0], (np.asarray(average_squared_zeroed) != 0).view(np.int8), [0]))
-    # absdiff = np.abs(np.diff(isnonzero))
-    # # Runs start and end where absdiff is 1.
-    # ranges = np.where(absdiff == 1)[0].reshape(-1, 2)
-
-    # r_maximums = []
-    # r_max_indexes = []
-    # for qrs_block in ranges:
-    #     r_block = average_squared_zeroed[int(qrs_block[0]):int(qrs_block[1])]
-    #     r_max_index = np.argmax(r_block)
-    #     qrs_max = r_block[r_max_index]
-
-    #     r_max_index = r_max_index + int(qrs_block[0])
-
-    #     r_maximums.append(qrs_max)
-    #     r_max_indexes.append(r_max_index)
-
-    # # print(str(r_maximums))
-    # # print(str(r_max_indexes))
-
-    # max_r = np.amax(r_maximums)
-    # min_r = np.amin(r_maximums)
-    # # print("Rmax = "+str(max_r))
-    # # print("Rmin = "+str(min_r))
-
-    # r_distances = []
-    # for i in range(0,len(r_max_indexes)-1):
-    #     r_distance = r_max_indexes[i+1] - r_max_indexes[i]
-    #     r_distances.append(r_distance)
-
-    # if len(r_distances) != 0:
-    #     mean_rr = np.mean(r_distances)
-    #     variance_rr = np.var(r_distances)
-    # else:
-    #     mean_rr = 0.0
-    #     variance_rr = 0.0
-
-    # # print("R distances = "+str(r_distances))
-    # # print("Mean RR = "+str(mean_rr))
-    # # print("RR Variance = "+str(variance_rr))
-
-    # if len(qrs_length) != 0:
-    #     min_qrs_length = np.amin(qrs_length)
-    #     max_qrs_length = np.amax(qrs_length)
-    #     mean_qrs_length = np.mean(qrs_length)
-    #     variance_qrs_length = np.var(qrs_length)
-    # else:
-    #     min_qrs_length = 0.0
-    #     max_qrs_length = 0.0
-    #     mean_qrs_length = 0.0
-    #     variance_qrs_length = 0.0
-
     p_wave_start,p_wave_end,t_wave_start,t_wave_end,p_wave_length,t_wave_length = get_t_p_wave(ecg_plot, r_max_indexes)
 
     #if __name__ == "__main__":
     return ecg_plot, p_wave_start, p_wave_end, q_point, r_max_indexes[0], s_point, t_wave_start, t_wave_end
 
-    #return max_r, min_r, mean_rr, variance_rr, max_qrs_length, min_qrs_length, mean_qrs_length, variance_qrs_length, t_wave_length, p_wave_length
-
-    # print("QRS max = "+str(max_qrs_length))
-    # print("QRS min = "+str(min_qrs_length))
-    # print("Mean QRS length = "+str(mean_qrs_length))
-    # print("Variance QRS length = "+str(variance_qrs_length))
-
 if __name__ == "__main__":
 
     #Magic Numbers
-    for f in glob.glob("./mit_bih_processed_data_two_leads/V/*.txt"):
+    for f in glob.glob("./mit_bih_processed_data_two_leads_r_marker/N/*.txt"):
         #file_string = "./mit_bih_processed_data_two_leads/N/ecg_10.txt"
         print(f)
 
-        ecg_1, ecg_2 = read_file(f)
-        [ecg_plot, p_wave_start, p_wave_end, q_point, r_max_indexes, s_point, t_wave_start, t_wave_end] = feature_extract_ecg(ecg_1)
+        ecg_1, ecg_2, r_index = read_file(f)
+
+        r_index = int(r_index)
+
+        [ecg_plot, p_wave_start, p_wave_end, q_point, r_index, s_point, t_wave_start, t_wave_end] = feature_extract_ecg(ecg_1, r_index)
 
         plt.subplot(211)    
 
         plt.plot(ecg_1,'r',label="unfiltered ECG")
         plt.title("ECG Signal - lead 1")
         #plt.plot(five_point_array,'g--',label="five point derivation")
-        for max in r_max_indexes:
-            plt.axvline(x=max,label="Max "+str(max))
+        #for max in r_max_indexes:
+        plt.axvline(x=r_index,label="Max "+str(r_index))
 
-        plt.plot(q_point,0,'r+')
-        plt.plot(s_point,0,'r+')
+        plt.axvline(x=q_point,c='red')
+        plt.axvline(x=s_point,c='red')
 
-        plt.plot(p_wave_start,0,'g+')
-        plt.plot(p_wave_end,0,'g+')
+        plt.axvline(x=p_wave_start,c='green')
+        plt.axvline(x=p_wave_end,c='green')
 
-        plt.plot(t_wave_start,0,'b+')
-        plt.plot(t_wave_end,0,'b+')
+        plt.axvline(x=t_wave_start,c='blue')
+        plt.axvline(x=t_wave_end,c='blue')
 
         #plt.legend(loc='upper left')
         # plt.plot(average_squared,'r',label="squared five point derivation")
@@ -351,17 +369,17 @@ if __name__ == "__main__":
         plt.plot(ecg_2,'r',label="unfiltered ECG")
         plt.title("ECG Signal - lead 2")
         #plt.plot(five_point_array,'g--',label="five point derivation")
-        for max in r_max_indexes:
-            plt.axvline(x=max,label="Max "+str(max))
+        #for max in r_max_indexes:
+        plt.axvline(x=r_index,label="Max "+str(r_index))
         
-        plt.plot(q_point,0,'r+')
-        plt.plot(s_point,0,'r+')
+        plt.axvline(x=q_point,c='red')
+        plt.axvline(x=s_point,c='red')
 
-        plt.plot(p_wave_start,0,'g+')
-        plt.plot(p_wave_end,0,'g+')
+        plt.axvline(x=p_wave_start,c='green')
+        plt.axvline(x=p_wave_end,c='green')
 
-        plt.plot(t_wave_start,0,'b+')
-        plt.plot(t_wave_end,0,'b+')
+        plt.axvline(x=t_wave_start,c='blue')
+        plt.axvline(x=t_wave_end,c='blue')
 
         #plt.legend(loc='upper left')
         # plt.plot(average_squared,'r',label="squared five point derivation")

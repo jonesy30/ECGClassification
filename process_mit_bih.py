@@ -28,7 +28,7 @@ beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTI
 
 leave_one_out_validation = 0
 
-def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filename="./mit_bih_processed_data_two_leads/"):
+def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filename="./mit_bih_processed_data_two_leads_r_marker/", r_index=None):
     
     if validation_flag == 1:
         if not os.path.exists(base_filename+"/network_validation/"+rhythm_name):
@@ -48,6 +48,8 @@ def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filena
         to_write = str(value_int) + " "
 
         f.write(to_write)
+    if r_index != None:
+        f.write(str(r_index))
     f.close()
 
 def get_full_ecg(filenumber, base_filename="mit_bih/"):
@@ -96,10 +98,13 @@ def get_full_ecg(filenumber, base_filename="mit_bih/"):
                 #print(complete_beat)
                 beat_label = annotation_classes[index]
 
-                beat_indexes.append([start_recording,end_recording,beat_label])
+                #beat_indexes.append([start_recording,end_recording,beat_label])
+                this_index = current_beat - start_recording
+                
+                beat_indexes.append(this_index)
                 complete_beats.append([complete_beat,beat_label])
     
-    return complete_beats
+    return complete_beats, beat_indexes
 
 def plot_ecg(filenumber, base_filename="mit_bih/", title="MIT-BIH Arrhythmia Database"):
 
@@ -131,10 +136,11 @@ def process_files(base_filename="mit_bih/"):
         ecg_files.append(filenumber)
         print(filenumber)
 
-        complete_beats = get_full_ecg(filenumber, base_filename=base_filename)
+        complete_beats,beat_indexes = get_full_ecg(filenumber, base_filename=base_filename)
 
-        for sig_beat in complete_beats:
+        for index,sig_beat in enumerate(complete_beats):
             signal, beat_label = sig_beat
+            r_index = beat_indexes[index]
             if len(signal) > current_max:
                 #max_length = len(signal)
                 current_max = len(signal)
@@ -153,9 +159,10 @@ def process_files(base_filename="mit_bih/"):
                 if (leave_one_out_validation == 1) and (any(x in file for x in leave_out_array)):
                     write_to_file(signal, beat_label, write_counter, validation_flag=1)
                 else:
-                    destination_filename = "external_validation_data/st_petersburg/"
-                    write_to_file(signal, beat_label, write_counter, base_filename=destination_filename)
-                    #write_to_file(signal, beat_label, write_counter)
+                    #destination_filename = "external_validation_data/st_petersburg/"
+                    #write_to_file(signal, beat_label, write_counter, base_filename=destination_filename, r_index=r_index)
+                    write_to_file(signal, beat_label, write_counter)
+                    #write_to_file(signal, beat_label, write_counter, r_index=r_index)
                 write_counter += 1
         print("Max = "+str(current_max))
         print("Max file = "+str(biggest_file))
@@ -166,8 +173,8 @@ def process_files(base_filename="mit_bih/"):
     print("Files Written = "+str(write_counter))
 
 if __name__ == "__main__":
-    #process_files()
-    process_files(base_filename="external_original/st_petersburg/files/")
+    process_files()
+    #process_files(base_filename="external_original/st_petersburg/files/")
     #plot_ecg(232)
 
     # for f in glob.glob("./mit_bih_two_second_samples/P/*.txt"):

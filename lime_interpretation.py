@@ -18,30 +18,81 @@ import random
 from keras.models import Model
 
 import lime
+import lime.lime_tabular
+import lime.lime_image
+from ecg_feature_extraction import feature_extract_ecg
 
 class_names = ['A','E','j','L','N','P','R','V']
 two_leads = 0
 
-# Xi = skimage.io.imread("https://arteagac.github.io/blog/lime_image/img/cat-and-dog.jpg")
-# Xi = skimage.transform.resize(Xi, (299,299)) 
-# Xi = (Xi - 0.5)*2 #Inception pre-processing
-# skimage.io.imshow(Xi/2+0.5) # Show image before inception preprocessing
+def normalize(ecg_signal, filename):
+    max_value = max(ecg_signal)
+    min_value = min(ecg_signal)
 
-# plt.show()
+    range_values = max_value - min_value
+
+    if range_values == 0:
+        print(max_value)
+        print(min_value)
+        print(filename)
+
+    if range_values == 0:
+        return ecg_signal
+
+    normalised = [(x - min_value)/range_values for x in ecg_signal]
+
+    return [np.float32(a) for a in normalised]
+
+#Function which reads ECG data and labels from each file in folder
+def read_data(foldername,save_unnormalised=False):
+    
+    data = []
+    labels = []
+    unnormalised = []
+
+    #for each file in corresponding folder
+    for file in os.listdir(foldername):
+        f = open(str(foldername+file), "r")
+        found_data = []
+        label = ""
+        for i,line in enumerate(f):
+            line = line.replace("\n","")
+            #ECG signal stored in first line separated by spaces
+            if i < 1:
+                line_segments = line.split()
+
+                if two_leads == 0:
+                    line_segments = line_segments[:430]
+                line_segments = [float(x) for x in line_segments]
+
+                for item in line_segments:
+                    found_data.append(item)
+            #label stored on second line
+            else:
+                index = class_names.index(line)
+                label = index
+        f.close()
+
+        #if label exists, store in trainng validation data
+        if label != "":
+            unnormalised.append(found_data)
+            normalized_data = normalize(found_data, file)
+            data.append(normalized_data)
+            labels.append(label)
+    
+    if save_unnormalised == True:
+        return [data, unnormalised], labels
+
+    return data, labels
 
 model_location = 'saved_models\\cnn\\cnn_model'
 model = tf.keras.models.load_model(model_location)
 
 print(model.summary())
 
-# model.layers[-1].activation=None
-
-# print(model.summary())
-
-# model = Model(model.input, model.layers[-1].output)
-# print(model.summary())
-
-f = open("./mit_bih_processed_data_two_leads/network_data/training_set/ecg_77001.txt", "r")
+#old normal file: 77001
+#old arrthmia file: 306
+f = open("./mit_bih_processed_data_two_leads/network_data/training_set/ecg_226.txt", "r")
 ecg = []
 for i,line in enumerate(f):
     line = line.replace("\n","")
@@ -55,269 +106,178 @@ for i,line in enumerate(f):
             ecg.append(item)
 f.close()
 
-# plt.plot(ecg)
 # plt.show()
 ecg_original = ecg.copy()
 
 ecg = [np.asarray(item) for item in ecg]
 ecg = np.array(ecg)
 
-ecg = np.array(ecg)
-
 ecg = ecg[:, np.newaxis]
 ecg = np.expand_dims(ecg, axis=0)
 
-preds = model.predict_proba(ecg)
-
-print(preds)
-print(preds[0].argsort()[-5:])
-
-top_pred_classes = preds[0].argsort()[-5:][::-1] # Save ids of top 5 classes
-print(top_pred_classes)
-
-# np.random.seed(222)
-# inceptionV3_model = keras.applications.inception_v3.InceptionV3() #Load pretrained model
-# preds = inceptionV3_model.predict(Xi[np.newaxis,:,:,:])
-# top_pred_classes = preds[0].argsort()[-5:][::-1] # Save ids of top 5 classes
-# decode_predictions(preds)[0] #Print top 5 classes
-
-# superpixels = skimage.segmentation.quickshift(Xi, kernel_size=4,max_dist=200, ratio=0.2)
-# num_superpixels = np.unique(superpixels).shape[0]
-# skimage.io.imshow(skimage.segmentation.mark_boundaries(Xi/2+0.5, superpixels))
-
-# plt.show()
-
-#Generate random masking blocks
-num_blocks = random.randint(50,150)
-
-masking_blocks = []
-
-for i in range(num_blocks):
-    #836: length of ecg (860) - min_length of block (25) + 1 fpr random outer bound
-    end_index = 1000
-    start_index = 0
-    mask_length = 0
-    
-    while end_index > 860:
-        start_index = random.randint(0,836)
-        mask_length = random.randint(25, 50)
-        end_index = start_index+mask_length
-    
-    masking_blocks.append([start_index, end_index])
-
-#Generate perturbations
-# num_perturb = 150
-# perturbations = np.random.binomial(1, 0.5, size=(num_perturb, num_superpixels))
-
-# #Create function to apply perturbations to images
-# def perturb_image(img,perturbation,segments): 
-#   active_pixels = np.where(perturbation == 1)[0]
-#   mask = np.zeros(segments.shape)
-#   for active in active_pixels:
-#       mask[segments == active] = 1 
-#   perturbed_image = copy.deepcopy(img)
-#   perturbed_image = perturbed_image*mask[:,:,np.newaxis]
-#   return perturbed_image
-
-# #Show example of perturbations
-# print(perturbations[0]) 
-# skimage.io.imshow(perturb_image(Xi/2+0.5,perturbations[0],superpixels))
-
-num_perturb = 150
-
-perturbations_indexes = []
-
-for i in range(num_perturb):
-    this_block = [1] * num_blocks
-    number_off = random.randint(1,num_blocks)
-    off_list = random.sample(range(0, num_blocks), number_off)
-    for index in off_list:
-        this_block[index] = 0
-    
-    perturbations_indexes.append(this_block)
-
-perturbation_ecgs = []
-for perturbation in perturbations_indexes:
-    new_ecg = ecg_original.copy()
-    for index,value in enumerate(perturbation):
-        if value == 0:
-            start, end = masking_blocks[index]
-            new_ecg[start:end] = [0]*(end-start)
-    perturbation_ecgs.append(new_ecg)
-
-#pre-process all perturbations into the correct format
-#perturbations = [np.asarray(item) for item in perturbations]
-
-original_perturbations_ecgs = perturbation_ecgs.copy()
-
-perturbation_ecgs = np.array(perturbation_ecgs)
-
-perturbation_ecgs = perturbation_ecgs[:, :, np.newaxis]
-
-# for index,perturbation in enumerate(perturbations):
-#     plt.plot(perturbation)
-#     plt.title(", ".join(str(v) for v in perturbations_indexes[index]))
-#     plt.show()
-
-# predictions = []
-# for pert in perturbations:
-#   perturbed_img = perturb_image(Xi,pert,superpixels)
-#   pred = inceptionV3_model.predict(perturbed_img[np.newaxis,:,:,:])
-#   predictions.append(pred)
-
-predictions = model.predict(perturbation_ecgs)
-
-predictions = np.array(predictions)
-
-print("Predictions")
-
-print(predictions.shape)
-print(predictions[0])
-
-ecg_reshaped = np.array(ecg_original)
-ecg_reshaped = ecg_reshaped.reshape(1,-1)
-
-distances = sklearn.metrics.pairwise_distances(original_perturbations_ecgs, ecg_reshaped, metric='cosine').ravel()
-print(distances.shape)
-
-# original_image = np.ones(num_superpixels)[np.newaxis,:] #Perturbation with all superpixels enabled 
-# distances = sklearn.metrics.pairwise_distances(perturbations,original_image, metric='cosine').ravel()
-# print(distances.shape)
-
-#Transform distances to a value between 0 an 1 (weights) using a kernel function
-kernel_width = 0.25
-weights = np.sqrt(np.exp(-(distances**2)/kernel_width**2)) #Kernel function
-print(weights.shape)
-
-class_to_explain = top_pred_classes[0] #Labrador class
-
-print(class_to_explain)
-
-print("Shape")
-print(perturbation_ecgs.shape)
-
-simpler_model = LinearRegression()
-simpler_model.fit(X=perturbations_indexes, y=predictions[:,class_to_explain], sample_weight=weights)
-
-coeff = simpler_model.coef_
-
-#coeff = simpler_model.coef_[0]
-
-print("Coeff = ")
-print(coeff)
-print(len(coeff))
-print(len(perturbations_indexes))
-
-#Use coefficients from linear model to extract top features
-num_top_features = 4
-top_features = np.argsort(coeff)[::-1][-num_top_features:] 
-
-print("Top Features")
-print(top_features)
-
-print(len(original_perturbations_ecgs))
-
-top_indexes = []
-for feature in top_features:
-    top_indexes.append(perturbations_indexes[feature])
-
-print(top_indexes)
-
-for perturbation in top_indexes:
-    new_ecg = ecg_original.copy()
-    for index, value in enumerate(perturbation):
-        if value == 0:
-            start, end = masking_blocks[index]
-            new_ecg[start:end] = [0]*(end-start)
-    plt.plot(new_ecg)
-    plt.show()
-
-worst_features = np.argsort(coeff)[-num_top_features:] 
-
-print("Worst Features")
-print(worst_features)
-
-print(len(original_perturbations_ecgs))
-
-worst_indexes = []
-for feature in worst_features:
-    worst_indexes.append(perturbations_indexes[feature])
-
-print(worst_indexes)
-
-for perturbation in worst_indexes:
-    new_ecg = ecg_original.copy()
-    for index, value in enumerate(perturbation):
-        if value == 0:
-            start, end = masking_blocks[index]
-            new_ecg[start:end] = [0]*(end-start)
-    plt.plot(new_ecg)
-    plt.show()
-
-sys.exit()
-
-# best_perturbations = []
-# for perturbation in top_peturbations:
-#     new_ecg = ecg_original.copy()
-#     for index,value in enumerate(perturbation):
-#         if value == 0:
-#             start, end = masking_blocks[index]
-#             new_ecg[start:end] = [0]*(end-start)
-#     best_perturbations.append(new_ecg)
-
-# for ecg in top_peturbations:
-#     plt.plot(ecg)
-#     plt.show()
-
-# worst_features = np.argsort(coeff)[::-1][-num_top_features:]
-
-# print("Worst Features")
-# print(worst_features)
-
-# worst_peturbations = []
-# for feature in worst_features:
-#     worst_peturbations.append(original_perturbations_ecgs[feature])
-
-# worst_perturbations = []
-# for perturbation in worst_peturbations:
-#     new_ecg = ecg_original.copy()
-#     for index,value in enumerate(perturbation):
-#         print(index)
-#         if value == 0:
-#             start, end = masking_blocks[index]
-#             new_ecg[start:end] = [0]*(end-start)
-#     worst_peturbations.append(new_ecg)
-
-# for ecg in worst_peturbations:
-#     plt.plot(ecg)
-#     plt.show()
-
-# sys.exit()
-
-
-
-#Show only the superpixels corresponding to the top features
-print(num_perturb)
-mask = np.zeros(num_perturb) 
-mask[top_features]= True #Activate top superpixels
-
-print(mask)
-print(len(mask))
+block_length = 20
+#num_blocks = 860//block_length
+num_blocks = 43
 print(num_blocks)
 
-print(len(masking_blocks))
+masked_blocks = []
+for i in range(num_blocks):
+    start_index = random.randint(-10, 870) #start_index -43 and end_index + 43 to allow for the starts/ends to be covered
+    end_index = start_index + 43
+    if start_index < 0:
+        start_index = 0
+    if end_index > 860:
+        end_index = 860
+    masked_blocks.append([start_index, end_index])
 
-print("Enumerating Mask")
-masked_ecg = ecg_original.copy()
-for mask_index, value in enumerate(mask):
-    if value == 0:
-        start, end = masking_blocks[mask_index]
-        masked_ecg[start:end] = [0]*(end-start)
+number_of_permutations = 150
 
-plt.plot(masked_ecg)
+permutation_blocks = []
+permutation_ecgs = []
+
+for index in range(number_of_permutations):
+    
+    this_permutation = [1]*num_blocks
+    new_ecg = ecg_original.copy()
+    
+    number_of_samples = random.randint(0, num_blocks)
+
+    off_list = random.sample(range(0, num_blocks), number_of_samples)
+
+    print(off_list)
+
+    for item in off_list:
+        this_permutation[item] = 0
+
+    #this is just visualisation
+    # for permutation_index,item in enumerate(this_permutation):
+    #     if item == 0:
+    #         #here, this is where I create the blocks
+    #         start_index = permutation_index*block_length
+    #         #end_index = (permutation_index+1)*block_length
+    #         start_index, end_index = masked_blocks[permutation_index]
+
+    #         new_ecg[start_index:end_index] = [0]*(end_index-start_index)
+
+    # print(this_permutation)
+    permutation_blocks.append(this_permutation)
+    # permutation_ecgs.append(new_ecg)
+
+permutation_blocks = [np.asarray(item) for item in permutation_blocks]
+permutation_blocks = np.array(permutation_blocks)
+
+# for index, new_ecg in enumerate(permutation_ecgs):
+#     permutation = permutation_blocks[index]
+#     plt.plot(new_ecg)
+#     plt.title(permutation)
+#     plt.show()
+
+def predict_fn(incoming_permutation):
+    # ecg = [np.asarray(item) for item in ecg]
+    # ecg = np.array(ecg)
+
+    # ecg = ecg[:, np.newaxis]
+    # ecg = np.expand_dims(ecg, axis=0)
+
+    # print(len(incoming_permutation[0]))
+
+    new_ecgs = []
+
+    for permutation in incoming_permutation:
+        new_ecg = ecg_original.copy()
+        for permutation_index,item in enumerate(permutation):
+            
+            if item == 0:
+                start_index = permutation_index*block_length
+                end_index = (permutation_index+1)*block_length
+                #start_index, end_index = masked_blocks[permutation_index]
+
+                new_ecg[start_index:end_index] = [0]*(end_index-start_index)
+        new_ecgs.append(new_ecg)
+
+    new_ecgs = [np.asarray(item) for item in new_ecgs]
+    new_ecgs = np.array(new_ecgs)
+
+    new_ecgs = new_ecgs[:, :, np.newaxis]
+
+    predictions = model.predict_proba(new_ecgs)
+    for index,prediction in enumerate(predictions):
+        predictions[index] = [int(value) for value in prediction]
+
+    return predictions
+
+ecg_original = [np.asarray(item) for item in ecg_original]
+ecg_original = np.array(ecg_original)
+
+# explainer = lime.lime_image.LimeImageExplainer()
+# explanation = explainer.explain_instance(ecg, model.predict_proba, top_labels=5, hide_color=1, num_samples=1000)
+
+print(len(permutation_blocks))
+
+explainer = lime.lime_tabular.LimeTabularExplainer(permutation_blocks, feature_names=np.arange(0,num_blocks,1), class_names=[0]*len(permutation_blocks), discretize_continuous=True)
+exp = explainer.explain_instance(np.ones(num_blocks), predict_fn, num_features=num_blocks)
+
+print(exp)
+
+print("List")
+print(exp.as_list())
+
+print("Map")
+
+this_map = exp.as_map()
+results_list = this_map[1]
+
+fig, ax = plt.subplots()
+plt.plot(ecg_original)
+plt.title("Abnormal ECG (atrial premature beat)")
+plt.hlines(0,xmin=0,xmax=860)
+plt.grid()
+for i in range(num_blocks-1):
+    ax.annotate("|",[block_length*(i+1),0])
+
+for rank,item in enumerate(results_list):
+    [index, importance] = item
+    start = index*block_length
+    end = (index+1)*block_length
+    midpoint = (end-start)/2 + start
+
+    if importance > 0:
+        ax.annotate(rank+1, [midpoint, 10], color='red')
+    else:
+        ax.annotate(rank+1, [midpoint, 10], color='green')
+
+#plot_features(exp, ncol = 1)
+
+# for index, item in enumerate(masked_blocks):
+#     print(str(index)+": "+str(item))
+
+ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_original[:430])
+
+ax.axvspan(p_wave_start, p_wave_end, alpha=0.5, color='coral')
+ax.axvspan(p_wave_start+430, p_wave_end+430, alpha=0.5, color='coral')
+
+ax.axvspan(q_point, r_max_index, alpha=0.5, color='yellow')
+ax.axvspan(q_point+430, r_max_index+430, alpha=0.5, color='yellow')
+
+ax.axvspan(r_max_index, s_point, alpha=0.5, color='lightgreen')
+ax.axvspan(r_max_index+430, s_point+430, alpha=0.5, color='lightgreen')
+
+ax.axvspan(t_wave_start, t_wave_end, alpha=0.5, color='lightseagreen')
+ax.axvspan(t_wave_start+430, t_wave_end+430, alpha=0.5, color='lightseagreen')
+
+plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start, 600), ha='center', color='coral')
+plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point, 600), ha='right', color='goldenrod')
+plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index, 600), color='darkgreen')
+plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start, 600), ha='center', color='lightseagreen')
+
+plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start+430, 600), ha='center', color='coral')
+plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point+430, 600), ha='right', color='goldenrod')
+plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index+430, 600), color='darkgreen')
+plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start+430, 600), ha='center', color='lightseagreen')
+
+exp.as_pyplot_figure()
+
 plt.show()
-#skimage.io.imshow(perturb_image(Xi/2+0.5,mask,superpixels))
 
-# plt.plot(perturbations)
-
-# plt.show()
+#explainer = lime_image.LimeImageExplainer()
+#explanation = explainer.explain_instance(images[0], inet_model.predict, top_labels=5, hide_color=0, num_samples=1000)

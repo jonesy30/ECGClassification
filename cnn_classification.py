@@ -20,6 +20,8 @@ import itertools
 import time
 from analyse_ml_results import analyse_results
 from sklearn.utils import resample
+from tensorflow.keras.callbacks import ReduceLROnPlateau
+from tensorflow.keras.optimizers import Adam
 
 #class_names = ['AFIB_AFL', 'AVB_TYPE2', 'BIGEMINY', 'EAR', 'IVR', 'JUNCTIONAL', 'NOISE', 'NSR', 'SVT', 'TRIGEMINY', 'WENCKEBACH']
 class_names = ['A','E','j','L','N','P','R','V']
@@ -27,7 +29,7 @@ labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
 
 label_names = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','P':'Paced'}
 
-two_leads = 0
+two_leads = 1
 
 #Function which normalizes the ECG signal
 def normalize(ecg_signal, filename):
@@ -270,9 +272,16 @@ verbose = 1
 epochs = 30
 batch_size = 128
 
+opt = Adam(learning_rate=0.001)
+
+reduce_lr = keras.callbacks.ReduceLROnPlateau(
+        factor=0.1,
+        patience=2,
+        min_lr=0.001 * 0.001)
+
 #Build and fit the model
-model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])
-history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,validation_split=0.1,verbose=verbose)
+model.compile(loss='categorical_crossentropy',optimizer=opt,metrics=['accuracy'])
+history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,validation_split=0.1,verbose=verbose, callbacks=[reduce_lr])
 #history = model.fit(training_data,training_labels,epochs=epochs,batch_size=batch_size,verbose=verbose)
 
 print("History Keys")
@@ -280,6 +289,13 @@ print(history.history.keys())
 
 print("Model Summary")
 print(model.summary())
+
+if not os.path.exists("./saved_models/"):
+    os.makedirs("./saved_models/")
+if not os.path.exists("./saved_models/cnn_hannun/"):
+    os.makedirs("./saved_models/cnn_hannun/")
+
+model.save(".\\saved_models\\cnn_hannun\\cnn_model")
 
 print("Evaluating....")
 
@@ -307,12 +323,5 @@ predicted_labels = model.predict(validation_data)
     
 end_time = time.time()
 print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
-
-if not os.path.exists("./saved_models/"):
-    os.makedirs("./saved_models/")
-if not os.path.exists("./saved_models/cnn_hannun/"):
-    os.makedirs("./saved_models/cnn_hannun/")
-
-model.save(".\\saved_models\\cnn_hannun\\cnn_model")
 
 analyse_results(history, validation_data, validation_labels, predicted_labels, "cnn", base_filename, unnormalised_validation, test_acc)

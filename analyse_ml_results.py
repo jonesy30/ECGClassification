@@ -79,7 +79,11 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
             incorrectly_identified_predicted_labels.append(class_names[predicted_value])
             incorrectly_identified_true_labels.append(class_names[actual])
 
-    file_location = base_filename
+    file_location = "./saved_ecg_classifications/"
+
+    if not os.path.exists(file_location):
+        os.makedirs(file_location)
+
     if "cnn" in model_type:
         file_location = base_filename+"/cnn/"
     elif "fully" in model_type.lower():
@@ -88,6 +92,10 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
         file_location = base_filename+"/lstm/"
     elif "transformer" in model_type.lower():
         file_location = base_filename+"/transformer/"
+    
+    if not os.path.exists(file_location):
+        os.makedirs(file_location)
+
     save_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, file_location)
 
     accuracy = correct/tested
@@ -135,10 +143,22 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
     overall_f1 = f1_score(actual_encoded, predicted_encoded, average='macro')
     overall_precision = precision_score(actual_encoded, predicted_encoded, average='macro')
     overall_recall = recall_score(actual_encoded, predicted_encoded, average='macro')
+    
+    fp = matrix.sum(axis=0) - np.diag(matrix)
+    fn = matrix.sum(axis=1) - np.diag(matrix)
+    tp = np.diag(matrix)
+    tn = matrix.sum() - (fp + fn + tp)
+
+    fp = fp.astype(float)
+    tn = tn.astype(float)
+
+    specificity = tn / (tn + fp)
+    specificity = np.mean(specificity)
 
     print("Overall F1: "+str(overall_f1))
     print("Overall Precision: "+str(overall_precision))
     print("Overall Recall: "+str(overall_recall))
+    print("Overall Specificity: "+str(specificity))
 
     #Plot prediction accuracy percentages
     plt.bar(class_names, accuracy_of_predictions)

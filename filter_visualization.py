@@ -14,6 +14,7 @@ from tensorflow.keras import activations
 from vis.utils import utils
 from scipy.signal import butter, lfilter, freqz
 from scipy import signal
+from ecg_feature_extraction import feature_extract_ecg
 
 class_names = ['A','E','j','L','N','P','R','V']
 two_leads = 0
@@ -30,7 +31,7 @@ def normalize(ecg_signal):
 
     normalised = [(x - min_value)/range_values for x in ecg_signal]
 
-    return [a * 50 for a in normalised]
+    return [a * -50 for a in normalised]
     #return [np.float32(a) for a in normalised]
 
 def standardise(ecg_signal):
@@ -63,50 +64,6 @@ def butter_lowpass_filter(data, cutoff, fs, order):
     b, a = butter_lowpass(cutoff, fs, order=order)
     y = lfilter(b, a, data)
     return y
-
-def read_data(foldername,save_unnormalised=False):
-    
-    data = []
-    labels = []
-    unnormalised = []
-
-    #for each file in corresponding folder
-    for file in os.listdir(foldername):
-        f = open(str(foldername+file), "r")
-        ecg = []
-        label = ""
-        for i,line in enumerate(f):
-            line = line.replace("\n","")
-            #ECG signal stored in first line separated by spaces
-            if i < 1:
-                line_segments = line.split()
-                if two_leads == 0:
-                    line_segments = line_segments[:430]
-                for i,item in enumerate(line_segments):
-                    line_segments[i] = float(item)
-
-                for item in line_segments:
-                    ecg.append(item)
-            #label stored on second line
-            else:
-                if str(line) not in class_names:
-                    label = ""
-                else:
-                    index = class_names.index(line)
-                    label = index
-        f.close()
-
-        #if label exists, store in trainng validation data
-        if label != "":
-            unnormalised.append(ecg)
-            normalized_data = normalize(ecg, file)
-            data.append(normalized_data)
-            labels.append(label)
-    
-    if save_unnormalised == True:
-        return [data, unnormalised], labels
-
-    return data, labels
 
 model_location = 'saved_models\\cnn\\cnn_model'
 model = tf.keras.models.load_model(model_location)
@@ -163,7 +120,7 @@ ixs = [0,1,2,4,5,6]
 outputs = [model.layers[i].output for i in ixs]
 model = Model(inputs=model.inputs, outputs=outputs)
 
-f = open("./mit_bih_processed_data_two_leads/network_data/training_set/ecg_77001.txt", "r")
+f = open("./mit_bih_processed_data_two_leads/network_data/training_set/ecg_226.txt", "r")
 ecg = []
 for i,line in enumerate(f):
     line = line.replace("\n","")
@@ -177,6 +134,8 @@ for i,line in enumerate(f):
             ecg.append(item)
 f.close()
 
+ecg_original = ecg.copy()
+
 #make one lead
 #ecg = ecg[:430]
 
@@ -185,8 +144,8 @@ order = 5
 fs = 360.0
 
 #ecg_plot_filtered = butter_highpass_filter(ecg, cutoff, fs, order)
-ecg_plot_filtered = butter_lowpass_filter(ecg, cutoff, fs, order)
-ecg_plot_filtered = normalize(ecg_plot_filtered)
+#ecg_plot_filtered = butter_lowpass_filter(ecg, cutoff, fs, order)
+ecg_plot_filtered = normalize(ecg)
 
 plt.plot(ecg)
 plt.plot(ecg_plot_filtered)
@@ -223,9 +182,36 @@ grads1 = np.rot90(grads1,k=1)
 fig, ax = plt.subplots(figsize=(18,2))
 ax.plot(ecg_plot_filtered)
 ax.imshow(grads1, cmap='jet',interpolation='nearest',aspect='auto')
-plt.title("Saliency Map - Normal")
+plt.title("Saliency Map - Abnormal (atrial premature)")
 plt.grid(which='both')
 plt.minorticks_on()
+
+ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_original[:430])
+
+ax.axvspan(p_wave_start, p_wave_end, alpha=0.5, color='coral')
+ax.axvspan(p_wave_start+430, p_wave_end+430, alpha=0.5, color='coral')
+
+ax.axvspan(q_point, r_max_index, alpha=0.5, color='yellow')
+ax.axvspan(q_point+430, r_max_index+430, alpha=0.5, color='yellow')
+
+ax.axvspan(r_max_index, s_point, alpha=0.5, color='lightgreen')
+ax.axvspan(r_max_index+430, s_point+430, alpha=0.5, color='lightgreen')
+
+ax.axvspan(t_wave_start, t_wave_end, alpha=0.5, color='lightseagreen')
+ax.axvspan(t_wave_start+430, t_wave_end+430, alpha=0.5, color='lightseagreen')
+
+_, top = ax.get_ylim()
+
+plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start, -50), ha='center', color='coral')
+plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point, -50), ha='right', color='goldenrod')
+plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index, -50), color='darkgreen')
+plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start, -50), ha='center', color='lightseagreen')
+
+plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start+430, -50), ha='center', color='coral')
+plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point+430, -50), ha='right', color='goldenrod')
+plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index+430, -50), color='darkgreen')
+plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start+430, -50), ha='center', color='lightseagreen')
+
 #ax.set_aspect(aspect=0.2)
 plt.figure()
 

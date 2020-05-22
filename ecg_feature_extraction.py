@@ -119,6 +119,8 @@ def read_file(file_string):
     return found_data_lead_1,found_data_lead_2
 
 def feature_extract_ecg(ecg_plot):
+
+    ecg_plot = np.trim_zeros(ecg_plot)
     
     r_max = np.argmax(ecg_plot)
     r_max_indexes = [r_max]
@@ -298,7 +300,7 @@ def feature_extract_ecg(ecg_plot):
     p_wave_start,p_wave_end,t_wave_start,t_wave_end,p_wave_length,t_wave_length = get_t_p_wave(ecg_plot, r_max_indexes)
 
     #if __name__ == "__main__":
-    return ecg_plot, p_wave_start, p_wave_end, q_point, r_max_indexes, s_point, t_wave_start, t_wave_end
+    return ecg_plot, p_wave_start, p_wave_end, q_point, r_max_indexes[0], s_point, t_wave_start, t_wave_end
 
     #return max_r, min_r, mean_rr, variance_rr, max_qrs_length, min_qrs_length, mean_qrs_length, variance_qrs_length, t_wave_length, p_wave_length
 

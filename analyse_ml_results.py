@@ -85,13 +85,13 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
         os.makedirs(file_location)
 
     if "cnn" in model_type:
-        file_location = base_filename+"/cnn/"
+        file_location = file_location+"/cnn/"
     elif "fully" in model_type.lower():
-        file_location = base_filename+"/fully_connected/"
+        file_location = file_location+"/fully_connected/"
     elif "lstm" in model_type.lower():
-        file_location = base_filename+"/lstm/"
+        file_location = file_location+"/lstm/"
     elif "transformer" in model_type.lower():
-        file_location = base_filename+"/transformer/"
+        file_location = file_location+"/transformer/"
     
     if not os.path.exists(file_location):
         os.makedirs(file_location)

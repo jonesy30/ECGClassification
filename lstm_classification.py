@@ -172,8 +172,10 @@ model.add(LSTM(64, return_sequences=False, input_shape=(input_shape, 1)))
 model.add(Dense(32, activation=tf.nn.relu))
 model.add(Dense(len(class_names), activation='softmax'))
 
-epochs = 150
+epochs = 40
 batch_size = 128
+
+print("Epochs = "+str(epochs))
 
 model.compile(loss=focal_loss(alpha=1), optimizer='nadam', metrics=['accuracy'])
 history = model.fit(training_data, training_labels, epochs=epochs, batch_size=batch_size, validation_split=0.1)

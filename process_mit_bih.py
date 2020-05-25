@@ -163,9 +163,15 @@ def process_files(base_filename="mit_bih/"):
                 if (leave_one_out_validation == 1) and (any(x in file for x in leave_out_array)):
                     write_to_file(signal, beat_label, write_counter, validation_flag=1)
                 else:
+<<<<<<< HEAD
                     #destination_filename = "external_validation_data/st_petersburg/"
                     #write_to_file(signal, beat_label, write_counter, base_filename=destination_filename)
                     write_to_file(signal, beat_label, write_counter)
+=======
+                    destination_filename = "external_validation_data/st_petersburg/"
+                    write_to_file(signal, beat_label, write_counter, base_filename=destination_filename)
+                    #write_to_file(signal, beat_label, write_counter)
+>>>>>>> 48df0c639d9db9126b8824cc2af08989a359148c
                     #write_to_file(signal, beat_label, write_counter, r_index=r_index)
                 write_counter += 1
         print("Max = "+str(current_max))
@@ -177,8 +183,8 @@ def process_files(base_filename="mit_bih/"):
     print("Files Written = "+str(write_counter))
 
 if __name__ == "__main__":
-    process_files()
-    #process_files(base_filename="external_original/st_petersburg/files/")
+    #process_files()
+    process_files(base_filename="external_original/st_petersburg/files/")
     #plot_ecg(232)
 
     # for f in glob.glob("./mit_bih_two_second_samples/P/*.txt"):

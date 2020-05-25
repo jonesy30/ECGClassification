@@ -184,13 +184,13 @@ else:
 # model.add(keras.layers.Dense(len(class_names), activation='softmax'))
 
 #Structure from Hannun et al
-model = keras.Sequential()
+# model = keras.Sequential()
 
-# #block 1
-model.add(keras.layers.InputLayer(input_shape=[input_shape,1]))
-model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
-model.add(keras.layers.BatchNormalization())
-model.add(keras.layers.LeakyReLU(alpha=0.3))
+# # #block 1
+# model.add(keras.layers.InputLayer(input_shape=[input_shape,1]))
+# model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
+# model.add(keras.layers.BatchNormalization())
+# model.add(keras.layers.LeakyReLU(alpha=0.3))
 
 input = keras.layers.Input(shape=(input_shape,1,))
 x = keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling')(input)
@@ -198,10 +198,10 @@ x = keras.layers.BatchNormalization()(x)
 x = keras.layers.LeakyReLU(alpha=0.3)(x)
 
 #block 2
-model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
-model.add(keras.layers.BatchNormalization())
-model.add(keras.layers.LeakyReLU(alpha=0.3))
-model.add(keras.layers.Dropout(0.2))
+# model.add(keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling'))
+# model.add(keras.layers.BatchNormalization())
+# model.add(keras.layers.LeakyReLU(alpha=0.3))
+# model.add(keras.layers.Dropout(0.2))
 
 x = keras.layers.Conv1D(kernel_size=16, filters=32, strides=1, use_bias=True, kernel_initializer='VarianceScaling')(x)
 x = keras.layers.BatchNormalization()(x)

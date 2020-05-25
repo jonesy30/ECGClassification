@@ -6,118 +6,135 @@ from scipy import signal
 from scipy import fftpack
 import sys
 
-mean_values_l1_incart = []
-mean_values_l2_incart = []
+def normalize(ecg_signal):
+    max_value = max(ecg_signal)
+    min_value = min(ecg_signal)
 
-for f in glob.glob("./external_validation_data/st_petersburg/V/*.txt"):
-    file = open(f, "r")
+    range_values = max_value - min_value
 
-    ecg_plot = file.read()
-    ecg_plot = ecg_plot.strip()
-    ecg = ecg_plot.split(" ")
-    ecg = [int(n) for n in ecg]
+    if range_values == 0:
+        return ecg_signal
 
-    lead_one = ecg[:430]
-    lead_two = ecg[430:]
+    normalised = [(x - min_value)/range_values for x in ecg_signal]
 
-    lead_one_mean = np.mean(lead_one)
-    lead_two_mean = np.mean(lead_two)
+    return [np.float32(a) for a in normalised]
 
-    mean_values_l1_incart.append(lead_one_mean)
-    mean_values_l2_incart.append(lead_two_mean)
+# mean_values_l1_incart = []
+# mean_values_l2_incart = []
 
-average_l1_incart = np.mean(mean_values_l1_incart)
-average_l2_incart = np.mean(mean_values_l2_incart)
+# for f in glob.glob("./external_validation_data/st_petersburg_r_markers/V/*.txt"):
+#     file = open(f, "r")
 
-print("Lead 1 INCART " + str(average_l1_incart))
-print("Lead 2 INCART " + str(average_l2_incart))
+#     ecg_plot = file.read()
+#     ecg_plot = ecg_plot.strip()
+#     ecg = ecg_plot.split(" ")
 
-mean_values_l1_mit = []
-mean_values_l2_mit = []
+#     r_value = ecg[-1]
+#     del ecg[-1]
 
-for f in glob.glob("./mit_bih_processed_data_two_leads/V/*.txt"):
-    file = open(f, "r")
+#     ecg = [int(n) for n in ecg]
 
-    ecg_plot = file.read()
-    ecg_plot = ecg_plot.strip()
-    ecg = ecg_plot.split(" ")
-    ecg = [int(n) for n in ecg]
+#     lead_one = ecg[:430]
+#     lead_two = ecg[430:]
 
-    lead_one = ecg[:430]
-    lead_two = ecg[430:]
+#     lead_one_mean = np.mean(lead_one)
+#     lead_two_mean = np.mean(lead_two)
 
-    lead_one_mean = np.mean(lead_one)
-    lead_two_mean = np.mean(lead_two)
+#     mean_values_l1_incart.append(lead_one_mean)
+#     mean_values_l2_incart.append(lead_two_mean)
 
-    mean_values_l1_mit.append(lead_one_mean)
-    mean_values_l2_mit.append(lead_two_mean)
+# average_l1_incart = np.mean(mean_values_l1_incart)
+# average_l2_incart = np.mean(mean_values_l2_incart)
 
-average_l1_mit = np.mean(mean_values_l1_mit)
-average_l2_mit = np.mean(mean_values_l2_mit)
+# print("Lead 1 INCART " + str(average_l1_incart))
+# print("Lead 2 INCART " + str(average_l2_incart))
 
-print("Lead 1 MIT-BIH " + str(average_l1_mit))
-print("Lead 2 MIT-BIH " + str(average_l2_mit))
+# mean_values_l1_mit = []
+# mean_values_l2_mit = []
 
-sys.exit()
+# for f in glob.glob("./mit_bih_processed_data_two_leads_r_marker/V/*.txt"):
+#     file = open(f, "r")
 
-fft_ecgs_incart = []
+#     ecg_plot = file.read()
+#     ecg_plot = ecg_plot.strip()
+#     ecg = ecg_plot.split(" ")
+#     ecg = [int(n) for n in ecg]
 
-for f in glob.glob("./external_validation_data/st_petersburg/V/*.txt"):
-    #f = "./mit_bih_two_second_samples/N/ecg_10007.txt"
-    file = open(f,"r")
+#     lead_one = ecg[:430]
+#     lead_two = ecg[430:]
 
-    ecg_plot = file.read()
-    ecg_plot = ecg_plot.strip()
-    ecg = ecg_plot.split(" ")
-    ecg = [int(n) for n in ecg]
+#     lead_one_mean = np.mean(lead_one)
+#     lead_two_mean = np.mean(lead_two)
 
-    lead_one = ecg[:430]
+#     mean_values_l1_mit.append(lead_one_mean)
+#     mean_values_l2_mit.append(lead_two_mean)
 
-    f_s = 360
+# average_l1_mit = np.mean(mean_values_l1_mit)
+# average_l2_mit = np.mean(mean_values_l2_mit)
 
-    fft_ecg = fftpack.fft(lead_one)
+# print("Lead 1 MIT-BIH " + str(average_l1_mit))
+# print("Lead 2 MIT-BIH " + str(average_l2_mit))
 
-    fft_ecgs_incart.append(fft_ecg)
+# sys.exit()
 
-mean_fft_incart = []
-for i in range(len(fft_ecgs_incart[0])):
-    #i_values = [fft_ecg[j][i] for j in fft_ecgs_incart]
+# fft_ecgs_incart = []
 
-    i_values = []
-    for ecg in fft_ecgs_incart:
-        i_values.append(ecg[i])
+# for f in glob.glob("./external_validation_data/st_petersburg/V/*.txt"):
+#     #f = "./mit_bih_two_second_samples/N/ecg_10007.txt"
+#     file = open(f,"r")
 
-    mean = np.mean(i_values)
-    mean_fft_incart.append(mean)
+#     ecg_plot = file.read()
+#     ecg_plot = ecg_plot.strip()
+#     ecg = ecg_plot.split(" ")
+#     ecg = [int(n) for n in ecg]
 
-fft_ecgs_mit = []
+#     lead_one = ecg[:430]
 
-for f in glob.glob("./mit_bih_processed_data_two_leads/V/*.txt"):
-    file = open(f,"r")
+#     f_s = 360
 
-    ecg_plot = file.read()
-    ecg_plot = ecg_plot.strip()
-    ecg = ecg_plot.split(" ")
-    ecg = [int(n) for n in ecg]
+#     fft_ecg = fftpack.fft(lead_one)
 
-    lead_one = ecg[:430]
+#     fft_ecgs_incart.append(fft_ecg)
 
-    f_s = 360
+# mean_fft_incart = []
+# for i in range(len(fft_ecgs_incart[0])):
+#     #i_values = [fft_ecg[j][i] for j in fft_ecgs_incart]
 
-    fft_ecg = fftpack.fft(lead_one)
+#     i_values = []
+#     for ecg in fft_ecgs_incart:
+#         i_values.append(ecg[i])
 
-    fft_ecgs_mit.append(fft_ecg)
+#     mean = np.mean(i_values)
+#     mean_fft_incart.append(mean)
 
-mean_fft_mit = []
-for i in range(len(fft_ecgs_mit[0])):
-    #i_values = [fft_ecg[j][i] for j in fft_ecgs_incart]
+# fft_ecgs_mit = []
 
-    i_values = []
-    for ecg in fft_ecgs_mit:
-        i_values.append(ecg[i])
+# for f in glob.glob("./mit_bih_processed_data_two_leads/V/*.txt"):
+#     file = open(f,"r")
 
-    mean = np.mean(i_values)
-    mean_fft_mit.append(mean)
+#     ecg_plot = file.read()
+#     ecg_plot = ecg_plot.strip()
+#     ecg = ecg_plot.split(" ")
+#     ecg = [int(n) for n in ecg]
+
+#     lead_one = ecg[:430]
+
+#     f_s = 360
+
+#     fft_ecg = fftpack.fft(lead_one)
+
+#     fft_ecgs_mit.append(fft_ecg)
+
+# mean_fft_mit = []
+# for i in range(len(fft_ecgs_mit[0])):
+#     #i_values = [fft_ecg[j][i] for j in fft_ecgs_incart]
+
+#     i_values = []
+#     for ecg in fft_ecgs_mit:
+#         i_values.append(ecg[i])
+
+#     mean = np.mean(i_values)
+#     mean_fft_mit.append(mean)
 
 # plt.plot(mean_fft_incart)
 # plt.plot(mean_fft_mit, linestyle="--")
@@ -144,7 +161,7 @@ for i in range(len(fft_ecgs_mit[0])):
 # /		Paced beat
 # f		Fusion of paced and normal beat (not included)
 
-for f in glob.glob("./external_validation_data/st_petersburg/V/*.txt"):
+for f in glob.glob("./external_validation_data/st_petersburg_r_markers/A/*.txt"):
     #f = "./mit_bih_two_second_samples/N/ecg_10007.txt"
     file = open(f,"r")
     print(f)
@@ -152,14 +169,19 @@ for f in glob.glob("./external_validation_data/st_petersburg/V/*.txt"):
     ecg_plot = file.read()
     ecg_plot = ecg_plot.strip()
     ecg = ecg_plot.split(" ")
+
+    del ecg[-1] 
+
     ecg = [int(n) for n in ecg]
+
+    ecg = normalize(ecg)
 
     print(len(ecg))
 
     lead_one = ecg[:430]
     lead_two = ecg[430:]
 
-    for g in glob.glob("./mit_bih_processed_data_two_leads/V/*.txt"):
+    for g in glob.glob("./mit_bih_processed_data_two_leads_r_marker/A/*.txt"):
         
         file_2 = open(g, "r")
         print(g)
@@ -167,7 +189,12 @@ for f in glob.glob("./external_validation_data/st_petersburg/V/*.txt"):
         mit_ecg_plot = file_2.read()
         mit_ecg_plot = mit_ecg_plot.strip()
         mit_ecg = mit_ecg_plot.split(" ")
+
+        del mit_ecg[-1]
+
         mit_ecg = [int(n) for n in mit_ecg]
+
+        mit_ecg = normalize(mit_ecg)
 
         mit_lead_one = mit_ecg[:430]
         mit_lead_two = mit_ecg[430:]
@@ -186,6 +213,6 @@ for f in glob.glob("./external_validation_data/st_petersburg/V/*.txt"):
         plt.title("Lead Two")
         plt.legend(['INCART','MIT-BIH'])
 
-        plt.suptitle("Dataset Comparison - Ventricular Contraction")
+        plt.suptitle("Dataset Comparison - Atrial Premature Beat")
 
         plt.show()

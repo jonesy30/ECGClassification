@@ -96,7 +96,8 @@ def analyse_results(history, validation_data, validation_labels, predicted_label
     if not os.path.exists(file_location):
         os.makedirs(file_location)
 
-    save_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, file_location)
+    save_predictions(incorrectly_identified_ecgs, incorrectly_identified_predicted_labels, incorrectly_identified_true_labels, file_location+"incorrect_predictions/")
+    save_predictions(correctly_identified_ecgs, correctly_identified_predicted_labels, correctly_identified_true_labels, file_location+"correct_predictions/")
 
     accuracy = correct/tested
 

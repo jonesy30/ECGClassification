@@ -125,6 +125,8 @@ def read_file(file_string, r_index=1):
 
     return found_data_lead_1,found_data_lead_2
 
+#method taken from Shanti Chandra, Ambalika Sharma & Girish Kumar Singh (2018) 
+#Feature extraction of ECG signal, Journal of Medical Engineering & Technology, 42:4, 306-316, DOI: 10.1080/03091902.2018.1492039
 def feature_extract_ecg(ecg_plot, r_index):
 
     ecg_plot = butter_highpass_filter(ecg_plot, 2, 360, 2)

@@ -15,9 +15,42 @@ from vis.utils import utils
 from scipy.signal import butter, lfilter, freqz
 from scipy import signal
 from ecg_feature_extraction import feature_extract_ecg
+import sys
 
 class_names = ['A','E','j','L','N','P','R','V']
 two_leads = 0
+
+def read_file_for_feature_extraction(file_string, r_index=1):
+    f = open(file_string, "r")
+    found_data = []
+    r_value = 0
+
+    for i,line in enumerate(f):
+        line = line.replace("\n","")
+        #ECG signal stored in first line separated by spaces
+        if i < 1:
+            line_segments = line.split()
+
+            if r_index == 1:
+                r_value = line_segments[-1]
+                del line_segments[-1]
+
+            line_segments = [float(x) for x in line_segments]
+
+            for item in line_segments:
+                found_data.append(item)
+    f.close()
+
+    found_data_lead_1 = found_data[:430]
+    found_data_lead_2 = found_data[430:]
+
+    found_data_lead_1 = np.trim_zeros(found_data_lead_1)
+    found_data_lead_2 = np.trim_zeros(found_data_lead_2)
+
+    if r_index == 1:
+        return found_data_lead_1,found_data_lead_2, r_value
+
+    return found_data_lead_1,found_data_lead_2
 
 #Function which normalizes the ECG signal
 def normalize(ecg_signal):
@@ -65,68 +98,73 @@ def butter_lowpass_filter(data, cutoff, fs, order):
     y = lfilter(b, a, data)
     return y
 
-model_location = 'saved_models\\cnn\\cnn_model'
+model_location = 'saved_models\\cnn_hannun\\cnn_model'
 model = tf.keras.models.load_model(model_location)
 
 print(model.summary())
 
-for layer in model.layers:
-    if 'conv' not in layer.name:
-        continue
-    filters, biases = layer.get_weights()
-    print(str(layer.name)  + ": " + str(filters.shape))
-    print(biases)
+# for layer in model.layers:
+#     if 'conv' not in layer.name:
+#         continue
+#     filters, biases = layer.get_weights()
+#     print(str(layer.name)  + ": " + str(filters.shape))
+#     print(biases)
 
-filters, biases = model.layers[0].get_weights()
-f_min, f_max = filters.min(), filters.max()
-filters = (filters - f_min)/(f_max - f_min)
+# filters, biases = model.layers[0].get_weights()
+# f_min, f_max = filters.min(), filters.max()
+# filters = (filters - f_min)/(f_max - f_min)
 
-n_filters, ix = 4, 1
-for i in range(n_filters):
-    f = filters[:,:,i]
-    ax = plt.subplot(2,n_filters,ix)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_title(i)
+# n_filters, ix = 4, 1
+# for i in range(n_filters):
+#     f = filters[:,:,i]
+#     ax = plt.subplot(2,n_filters,ix)
+#     ax.set_xticks([])
+#     ax.set_yticks([])
+#     ax.set_title(i)
 
-    plt.imshow(f, cmap='gray')
-    ix += 1
+#     plt.imshow(f, cmap='gray')
+#     ix += 1
 
-filters, biases = model.layers[4].get_weights()
-f_min, f_max = filters.min(), filters.max()
-filters = (filters - f_min)/(f_max - f_min)
+# filters, biases = model.layers[4].get_weights()
+# f_min, f_max = filters.min(), filters.max()
+# filters = (filters - f_min)/(f_max - f_min)
 
-for i in range(n_filters):
-    f = filters[:,:,i]
-    ax = plt.subplot(2,n_filters,ix)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_title(i)
+# for i in range(n_filters):
+#     f = filters[:,:,i]
+#     ax = plt.subplot(2,n_filters,ix)
+#     ax.set_xticks([])
+#     ax.set_yticks([])
+#     ax.set_title(i)
 
-    plt.imshow(f, cmap='gray')
-    ix += 1
+#     plt.imshow(f, cmap='gray')
+#     ix += 1
 
-plt.suptitle("Feature Visualisation of Conv Layers")
-plt.figure()
-#plt.show()
+# plt.suptitle("Feature Visualisation of Conv Layers")
+# plt.figure()
+# #plt.show()
 
-for i in range(len(model.layers)):
-    layer = model.layers[i]
-    if 'conv' not in layer.name:
-        continue
-    print(str(i) + ": " + layer.name + " - " + str(layer.output.shape))
+# for i in range(len(model.layers)):
+#     layer = model.layers[i]
+#     if 'conv' not in layer.name:
+#         continue
+#     print(str(i) + ": " + layer.name + " - " + str(layer.output.shape))
 
-ixs = [0,1,2,4,5,6]
-outputs = [model.layers[i].output for i in ixs]
-model = Model(inputs=model.inputs, outputs=outputs)
+# ixs = [0,1,2,4,5,6]
+# outputs = [model.layers[i].output for i in ixs]
+# model = Model(inputs=model.inputs, outputs=outputs)
 
-f = open("./mit_bih_processed_data_two_leads/network_data/training_set/ecg_226.txt", "r")
+filename = "./mit_bih_processed_data_two_leads_r_marker/network_data/training_set/ecg_354.txt"
+f = open(filename, "r")
 ecg = []
 for i,line in enumerate(f):
     line = line.replace("\n","")
     #ECG signal stored in first line separated by spaces
     if i < 1:
         line_segments = line.split()
+
+        r_value = line_segments[-1]
+        del line_segments[-1]
+
         for i,item in enumerate(line_segments):
             line_segments[i] = float(item)
 
@@ -161,32 +199,47 @@ ecg = np.array(ecg)
 ecg = ecg[:, np.newaxis]
 ecg = expand_dims(ecg, axis=0)
 
-feature_maps = model.predict(ecg)
-square = 20
-for map_index,fmap in enumerate(feature_maps):
-    plt.suptitle("Feature Map, Layer "+str(ixs[map_index]))
-    ix = 1
-    for _ in range(square):
-        ax = plt.subplot(square,1,ix)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        plt.imshow(fmap[:,ix-1],cmap='gray')
-        ix += 1
-    plt.figure()
+# feature_maps = model.predict(ecg)
+# square = 20
+# for map_index,fmap in enumerate(feature_maps):
+#     plt.suptitle("Feature Map, Layer "+str(ixs[map_index]))
+#     ix = 1
+#     for _ in range(square):
+#         ax = plt.subplot(square,1,ix)
+#         ax.set_xticks([])
+#         ax.set_yticks([])
+#         plt.imshow(fmap[:,ix-1],cmap='gray')
+#         ix += 1
+#     plt.figure()
 
 grads1 = visualize_saliency(model, 5, filter_indices=None, seed_input=ecg,keepdims=True)
 
+upsampling_factor = 25
+
+plot_grads = []
+for item in grads1:
+    for i in range(upsampling_factor):
+        plot_grads.append(item)
+
+ecg_upsampled = signal.resample(ecg_original,upsampling_factor*860)
+
+fig, ax = plt.subplots(figsize=(18,2))
+plt.plot(ecg_original,zorder=1)
+sc = ax.scatter(np.arange(0,860,1/upsampling_factor),ecg_upsampled,c=plot_grads,s=5,zorder=2)
+
+plt.colorbar(sc)
 
 #grads1 = grads1[2]
-grads1 = np.rot90(grads1,k=1)
-fig, ax = plt.subplots(figsize=(18,2))
-ax.plot(ecg_plot_filtered)
-ax.imshow(grads1, cmap='jet',interpolation='nearest',aspect='auto')
-plt.title("Saliency Map - Abnormal (atrial premature)")
+#grads1 = np.rot90(grads1,k=1)
+#fig, ax = plt.subplots(figsize=(18,2))
+#ax.plot(ecg_plot_filtered)
+#ax.imshow(grads1, cmap='jet',interpolation='nearest',aspect='auto')
+plt.title("Saliency Map - Abonormal (Atrial Premature Beat)")
 plt.grid(which='both')
 plt.minorticks_on()
 
-ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_original[:430])
+ecg_lead_1, ecg_lead_2, r_value = read_file_for_feature_extraction(filename)
+ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_lead_1, r_value)
 
 ax.axvspan(p_wave_start, p_wave_end, alpha=0.5, color='coral')
 ax.axvspan(p_wave_start+430, p_wave_end+430, alpha=0.5, color='coral')
@@ -202,15 +255,15 @@ ax.axvspan(t_wave_start+430, t_wave_end+430, alpha=0.5, color='lightseagreen')
 
 _, top = ax.get_ylim()
 
-plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start, -50), ha='center', color='coral')
-plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point, -50), ha='right', color='goldenrod')
-plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index, -50), color='darkgreen')
-plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start, -50), ha='center', color='lightseagreen')
+plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start, 1600), ha='center', color='coral')
+plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point, 1600), ha='right', color='goldenrod')
+plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index, 1600), color='darkgreen')
+plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start, 1600), ha='center', color='lightseagreen')
 
-plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start+430, -50), ha='center', color='coral')
-plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point+430, -50), ha='right', color='goldenrod')
-plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index+430, -50), color='darkgreen')
-plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start+430, -50), ha='center', color='lightseagreen')
+plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start+430, 1600), ha='center', color='coral')
+plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point+430, 1600), ha='right', color='goldenrod')
+plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index+430, 1600), color='darkgreen')
+plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start+430, 1600), ha='center', color='lightseagreen')
 
 #ax.set_aspect(aspect=0.2)
 plt.figure()

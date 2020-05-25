@@ -5,7 +5,7 @@ import numpy as np
 from scipy import signal
 from scipy.signal import resample
 
-beat_replacement = {'/':'P'} #since you can't have / as a foldername!
+beat_replacement = {'/':'P','J':'unused','S':'unused'} #since you can't have / as a foldername!
 beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','/':'Paced'}
 
 # N		Normal beat (displayed as "·" by the PhysioBank ATM, LightWAVE, pschart, and psfd)
@@ -27,8 +27,9 @@ beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTI
 # f		Fusion of paced and normal beat (not included)
 
 leave_one_out_validation = 0
+downsample_to_match_incart = 0
 
-def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filename="./mit_bih_processed_data_two_leads_r_marker/", r_index=None):
+def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filename="./mit_bih_processed_data_two_leads/", r_index=None):
     
     if validation_flag == 1:
         if not os.path.exists(base_filename+"/network_validation/"+rhythm_name):
@@ -85,9 +86,12 @@ def get_full_ecg(filenumber, base_filename="mit_bih/"):
             complete_beat_1 = ecg_lead_1[start_recording:end_recording]
             complete_beat_2 = ecg_lead_2[start_recording:end_recording]
 
-            if "st_petersburg" in base_filename:
+            if "st_petersburg" in base_filename and downsample_to_match_incart != 1:
                 complete_beat_1 = signal.resample(complete_beat_1,int(round(len(complete_beat_1)*1.401)))
                 complete_beat_2 = signal.resample(complete_beat_2,int(round(len(complete_beat_2)*1.401)))
+            elif downsample_to_match_incart == 1:
+                complete_beat_1 = signal.resample(complete_beat_1,257)
+                complete_beat_2 = signal.resample(complete_beat_2,257)
 
             if len(complete_beat_1) <= max_length:
                 complete_beat_1 = np.pad(complete_beat_1, (0, max_length - len(complete_beat_1)), 'constant')
@@ -160,7 +164,7 @@ def process_files(base_filename="mit_bih/"):
                     write_to_file(signal, beat_label, write_counter, validation_flag=1)
                 else:
                     #destination_filename = "external_validation_data/st_petersburg/"
-                    #write_to_file(signal, beat_label, write_counter, base_filename=destination_filename, r_index=r_index)
+                    #write_to_file(signal, beat_label, write_counter, base_filename=destination_filename)
                     write_to_file(signal, beat_label, write_counter)
                     #write_to_file(signal, beat_label, write_counter, r_index=r_index)
                 write_counter += 1
@@ -178,29 +182,31 @@ if __name__ == "__main__":
     #plot_ecg(232)
 
     # for f in glob.glob("./mit_bih_two_second_samples/P/*.txt"):
-    # #f = "./mit_bih_two_second_samples/N/ecg_10007.txt"
-    #     file = open(f,"r")
-    #     print(f)
+    # f = "./mit_bih_processed_data_two_leads_downsampled_incart/N/ecg_3.txt"
+    # file = open(f,"r")
+    # print(f)
 
-    #     ecg_plot = file.read()
-    #     ecg_plot = ecg_plot.strip()
-    #     ecg = ecg_plot.split(" ")
-    #     ecg = [int(n) for n in ecg]
+    # ecg_plot = file.read()
+    # ecg_plot = ecg_plot.strip()
+    # ecg = ecg_plot.split(" ")
+    # ecg = [int(n) for n in ecg]
 
-    #     lead_one = ecg[:720]
-    #     lead_two = ecg[720:]
+    # print(len(ecg))
 
-    #     plt.subplot(211)
+    # lead_one = ecg[:720]
+    # lead_two = ecg[720:]
 
-    #     plt.plot(lead_one)
-    #     plt.title("Lead One")
+    # plt.subplot(211)
 
-    #     plt.subplot(212)
+    # plt.plot(lead_one)
+    # plt.title("Lead One")
 
-    #     plt.plot(lead_two)
-    #     plt.title("Lead Two")
+    # plt.subplot(212)
 
-    #     plt.show()
+    # plt.plot(lead_two)
+    # plt.title("Lead Two")
+
+    # plt.show()
 
     #plot_ecg("I01",base_filename="./external_original/st_petersburg/files/",title="St Petersburg INCART Dataset")
 

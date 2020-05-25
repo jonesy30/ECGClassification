@@ -54,7 +54,7 @@ def predict_fn(incoming_permutation):
 
     new_ecgs = new_ecgs[:, :, np.newaxis]
 
-    predictions = model.predict_proba(new_ecgs)
+    predictions = model.predict(new_ecgs)
     for index,prediction in enumerate(predictions):
         predictions[index] = [int(value) for value in prediction]
 
@@ -110,14 +110,14 @@ def read_file_for_feature_extraction(file_string, r_index=1):
 
     return found_data_lead_1,found_data_lead_2
 
-model_location = 'saved_models\\cnn\\cnn_model'
+model_location = 'saved_models\\cnn_hannun\\cnn_model'
 model = tf.keras.models.load_model(model_location)
 
 print(model.summary())
 
 #old normal file: 77001
 #old arrthmia file: 306
-filename = "./mit_bih_processed_data_two_leads_r_marker/network_data/training_set/ecg_227.txt"
+filename = "./mit_bih_processed_data_two_leads_r_marker/network_data/training_set/ecg_354.txt"
 f = open(filename, "r")
 ecg = []
 for i,line in enumerate(f):
@@ -227,7 +227,7 @@ results_list = this_map[1]
 
 fig, ax = plt.subplots()
 plt.plot(ecg_original)
-plt.title("Abnormal ECG (atrial premature beat)")
+plt.title("LIME Visualisation - Abonormal (Atrial Premature Beat)")
 plt.hlines(0,xmin=0,xmax=860)
 plt.grid()
 for i in range(num_blocks-1):

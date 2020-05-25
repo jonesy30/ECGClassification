@@ -8,6 +8,8 @@ import tensorflow as tf
 from tensorflow.keras.utils import to_categorical
 from analyse_ml_results import analyse_results
 import sys
+from tensorflow import keras
+from tensorflow.keras.layers import Conv1D
 
 #code taken (and adapted) from https://github.com/facundodeza/transfomer-audio-classification/blob/master/audio_classification_transformer.ipynb
 
@@ -26,6 +28,8 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         super(MultiHeadAttention, self).__init__(name=name)
         self.num_heads = num_heads
         self.d_model = d_model
+
+        print("D Model = "+str(d_model))
 
         assert d_model % self.num_heads == 0
 
@@ -155,7 +159,13 @@ def transformer(num_layers,
                 dropout,
                 output_size,
                 name="transformer"):
-    inputs = tf.keras.Input(shape=(None,d_model), name="inputs")
+    
+    inputs = tf.keras.Input(shape=(None, None, d_model), name="inputs")
+
+    conv = keras.layers.Conv2D(kernel_size=(5,1), filters=1, strides=3, activation='relu', kernel_initializer='VarianceScaling')(inputs)
+   
+    #conv = keras.layers.Conv1D(kernel_size=5, filters=32, strides=1, activation='relu', kernel_initializer='VarianceScaling')(x)
+
 
     #enc_padding_mask = tf.keras.layers.Embedding(input_dim=d_model, mask_zero=True)(inputs)
 
@@ -169,7 +179,7 @@ def transformer(num_layers,
         #Like our input has a dimension of length X d_model but the masking is applied to a vector
         # We get the sum for each row and result is a vector. So, if result is 0 it is because in that position was masked      
         tf.math.reduce_sum(
-        inputs,
+        conv,
         axis=2,
         keepdims=False,
         name=None), tf.int32))
@@ -280,7 +290,7 @@ def scaled_dot_product_attention(query, key, value, mask):
 
 base_filename = "./mit_bih_processed_data_two_leads/"
 
-(training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
+(training_data, training_labels) = read_data(base_filename + "network_data/validation_set/")
 ([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
 
 #training_data = validation_data
@@ -290,6 +300,7 @@ training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
 
 training_data = training_data[:,np.newaxis,:]
+training_data = training_data[:,:,:,np.newaxis]
 
 training_labels = to_categorical(training_labels, num_classes=len(class_names))
 
@@ -313,7 +324,7 @@ print(training_data.shape)
 
 NUM_LAYERS = 6
 D_MODEL = training_data.shape[2]
-NUM_HEADS = 5
+NUM_HEADS = 3
 UNITS = 128
 DROPOUT = 0.2
 OUTPUT_SIZE = len(class_names)

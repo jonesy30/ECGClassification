@@ -18,7 +18,7 @@ from analyse_ml_results import analyse_results
 import tensorflow as tf
 
 class_names = ['A','E','j','L','N','P','R','V']
-two_leads = 0
+two_leads = 1
 
 def focal_loss(gamma=2., alpha=4.):
 
@@ -172,7 +172,7 @@ model.add(LSTM(64, return_sequences=False, input_shape=(input_shape, 1)))
 model.add(Dense(32, activation=tf.nn.relu))
 model.add(Dense(len(class_names), activation='softmax'))
 
-epochs = 40
+epochs = 20
 batch_size = 128
 
 print("Epochs = "+str(epochs))
@@ -210,9 +210,9 @@ predicted_labels = model.predict(validation_data)
     
 if not os.path.exists("./saved_models/"):
     os.makedirs("./saved_models/")
-if not os.path.exists("./saved_models/lstm/"):
-    os.makedirs("./saved_models/lstm/")
+if not os.path.exists("./saved_models/lstm_two_leads/"):
+    os.makedirs("./saved_models/lstm_two_leads/")
 
-model.save(".\\saved_models\\lstm\\lstm_model")
+model.save(".\\saved_models\\lstm_two_leads\\lstm_model")
 
-analyse_results(history, validation_data, validation_labels, predicted_labels, "lstm", base_filename, unnormalised_validation, test_acc)
+analyse_results(history, validation_data, validation_labels, predicted_labels, "lstm_two_leads", base_filename, unnormalised_validation, test_acc)

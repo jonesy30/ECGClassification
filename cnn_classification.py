@@ -98,7 +98,7 @@ def read_data(foldername,save_unnormalised=False):
 
 start_time = time.time()
 
-base_filename = "./mit_bih_processed_data_two_leads/"
+base_filename = "./mit_bih_processed_data_two_leads_downsampled_incart/"
 
 (training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
 
@@ -269,7 +269,7 @@ model = tf.keras.models.Model(inputs=[input], outputs=out)
 
 #MAGIC NUMBERS
 verbose = 1
-epochs = 30
+epochs = 15
 batch_size = 128
 
 opt = Adam(learning_rate=0.001)
@@ -292,10 +292,10 @@ print(model.summary())
 
 if not os.path.exists("./saved_models/"):
     os.makedirs("./saved_models/")
-if not os.path.exists("./saved_models/cnn_hannun/"):
-    os.makedirs("./saved_models/cnn_hannun/")
+if not os.path.exists("./saved_models/cnn_downsampled/"):
+    os.makedirs("./saved_models/cnn_downsampled/")
 
-model.save(".\\saved_models\\cnn_hannun\\cnn_model")
+model.save(".\\saved_models\\cnn_downsampled\\cnn_model")
 
 print("Evaluating....")
 

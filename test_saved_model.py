@@ -9,7 +9,7 @@ from analyse_ml_results import analyse_results
 #from cnn_classification import read_data
 
 class_names = ['A','E','j','L','N','P','R','V']
-two_leads = 0
+two_leads = 1
 
 def focal_loss(gamma=2., alpha=4.):
 
@@ -113,7 +113,7 @@ new_model = tf.keras.models.load_model(model_location, custom_objects={'focal_lo
 
 print(new_model.summary())
 
-#base_filename = "./external_validation_data/st_petersburg/network_data/training_set/"
+#base_filename = "./external_validation_data/st_petersburg_downsampled/network_data/complete_set/"
 
 base_filename = "./mit_bih_processed_data_two_leads/network_data/validation_set/"
 

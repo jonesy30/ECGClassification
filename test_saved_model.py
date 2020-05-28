@@ -108,19 +108,14 @@ def read_data(foldername,save_unnormalised=False):
 
     return data, labels
 
-<<<<<<< HEAD
-model_location = 'saved_models\\cnn_downsampled\\cnn_model'
-new_model = tf.keras.models.load_model(model_location)
-=======
 model_location = 'saved_models\\lstm\\lstm_model'
 new_model = tf.keras.models.load_model(model_location, custom_objects={'focal_loss_fixed': focal_loss()})
->>>>>>> 48df0c639d9db9126b8824cc2af08989a359148c
 
 print(new_model.summary())
 
-base_filename = "./external_validation_data/st_petersburg_downsampled/network_data/complete_set/"
+#base_filename = "./external_validation_data/st_petersburg_downsampled/network_data/complete_set/"
 
-#base_filename = "./mit_bih_processed_data_two_leads/network_data/validation_set/"
+base_filename = "./mit_bih_processed_data_two_leads/network_data/validation_set/"
 
 #base_filename + "network_data/validation_set/"
 #"hannun_validation_data/""

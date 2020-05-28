@@ -23,8 +23,43 @@ import lime.lime_image
 from ecg_feature_extraction import feature_extract_ecg
 
 class_names = ['A','E','j','L','N','P','R','V']
-two_leads = 0
 
+def focal_loss(gamma=2., alpha=4.):
+
+    gamma = float(gamma)
+    alpha = float(alpha)
+
+    def focal_loss_fixed(y_true, y_pred):
+        """Focal loss for multi-classification
+        FL(p_t)=-alpha(1-p_t)^{gamma}ln(p_t)
+        Notice: y_pred is probability after softmax
+        gradient is d(Fl)/d(p_t) not d(Fl)/d(x) as described in paper
+        d(Fl)/d(p_t) * [p_t(1-p_t)] = d(Fl)/d(x)
+        Focal Loss for Dense Object Detection
+        https://arxiv.org/abs/1708.02002
+
+        Arguments:
+            y_true {tensor} -- ground truth labels, shape of [batch_size, num_cls]
+            y_pred {tensor} -- model's output, shape of [batch_size, num_cls]
+
+        Keyword Arguments:
+            gamma {float} -- (default: {2.0})
+            alpha {float} -- (default: {4.0})
+
+        Returns:
+            [tensor] -- loss.
+        """
+        epsilon = 1.e-9
+        y_true = tf.convert_to_tensor(y_true, tf.float32)
+        y_pred = tf.convert_to_tensor(y_pred, tf.float32)
+
+        model_out = tf.add(y_pred, epsilon)
+        ce = tf.multiply(y_true, -tf.math.log(model_out))
+        weight = tf.multiply(y_true, tf.pow(tf.subtract(1., model_out), gamma))
+        fl = tf.multiply(alpha, tf.multiply(weight, ce))
+        reduced_fl = tf.reduce_max(fl, axis=1)
+        return tf.reduce_mean(reduced_fl)
+    return focal_loss_fixed
 
 def predict_fn(incoming_permutation):
     # ecg = [np.asarray(item) for item in ecg]
@@ -110,14 +145,16 @@ def read_file_for_feature_extraction(file_string, r_index=1):
 
     return found_data_lead_1,found_data_lead_2
 
-model_location = 'saved_models\\cnn_hannun\\cnn_model'
-model = tf.keras.models.load_model(model_location)
+two_leads = 0
+model_location = 'saved_models\\lstm\\lstm_model'
+#model = tf.keras.models.load_model(model_location)
+model = tf.keras.models.load_model(model_location, custom_objects={'focal_loss_fixed': focal_loss()})
 
 print(model.summary())
 
 #old normal file: 77001
 #old arrthmia file: 306
-filename = "./mit_bih_processed_data_two_leads_r_marker/network_data/training_set/ecg_354.txt"
+filename = "./mit_bih_processed_data_two_leads_r_marker/network_data/training_set/ecg_44588.txt"
 f = open(filename, "r")
 ecg = []
 for i,line in enumerate(f):
@@ -130,8 +167,9 @@ for i,line in enumerate(f):
             r_value = line_segments[-1]
             del line_segments[-1]
 
-        for i,item in enumerate(line_segments):
-            line_segments[i] = float(item)
+        if two_leads == 0:
+            line_segments = line_segments[:430]
+            line_segments = [float(x) for x in line_segments]
 
         for item in line_segments:
             ecg.append(item)
@@ -147,9 +185,14 @@ ecg = np.array(ecg)
 ecg = ecg[:, np.newaxis]
 ecg = np.expand_dims(ecg, axis=0)
 
-block_length = 20
+if two_leads == 0:
+    block_length = 5
+    num_blocks = 86
+else:
+    block_length = 20
+    num_blocks = 43
 #num_blocks = 860//block_length
-num_blocks = 43
+#num_blocks = 43
 print(num_blocks)
 
 masked_blocks = []

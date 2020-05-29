@@ -14,9 +14,9 @@ from numpy import fft
 #base_folder = "./split_processed_data"
 destination_folder = "./network_data"
 #base_folder = "./external_validation_data/st_petersburg/"
-base_folder = "./mit_bih_processed_data_two_leads/"
+base_folder = "./mit_bih_processed_data_two_leads_leave_out_validation/"
 binary_file = 0
-leave_one_out_validation = 0
+leave_one_out_validation = 1
 
 def read_ecg_data(filename, binary_file=1):
     f = open(filename,"r")

@@ -115,7 +115,7 @@ print(model.summary())
 two_leads = 1
 
 
-base_filename = "./mit_bih_processed_data_two_leads_r_marker/V/"
+base_filename = "./mit_bih_processed_data_two_leads_r_marker/R/"
 feature_importances = [None]*16
 
 processed_counter = 0
@@ -190,7 +190,7 @@ print(actual_processed_counter)
 
 two_leads = 1
 
-filename = "./mit_bih_processed_data_two_leads_r_marker/V/ecg_101497.txt"
+filename = "./mit_bih_processed_data_two_leads_r_marker/R/ecg_100001.txt"
 f = open(filename, "r")
 ecg = []
 for i,line in enumerate(f):
@@ -324,7 +324,7 @@ for index,i in enumerate(segment_block):
 # plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index+430, label_height), color='darkgreen')
 # plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start+430, label_height), ha='center', color='lightseagreen')
 
-plt.title("Saliency Map - Average Contribution Per Feature (Premature Ventricular Contraction)")
+plt.title("Saliency Map - Average Contribution Per Feature (Right Bundle Branch Block Beat)")
 plt.grid(which='both')
 plt.minorticks_on()
 

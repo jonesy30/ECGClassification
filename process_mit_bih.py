@@ -26,17 +26,16 @@ beat_dict = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTI
 # /		Paced beat
 # f		Fusion of paced and normal beat (not included)
 
-leave_one_out_validation = 0
+leave_one_out_validation = 1
 downsample_to_match_incart = 0
 
-def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filename="./mit_bih_processed_data_two_leads/", r_index=None):
+def write_to_file(ecg_plot, rhythm_name, index, validation_flag = 0, base_filename="./mit_bih_processed_data_two_leads_leave_out_validation/", r_index=None):
     
     if validation_flag == 1:
         if not os.path.exists(base_filename+"/network_validation/"+rhythm_name):
             os.makedirs(base_filename+"/network_validation/"+rhythm_name)
 
         f= open(base_filename+"/network_validation/"+rhythm_name+"/ecg_"+str(index)+".txt","w")
-        print("Validation set - "+rhythm_name)
 
     else:
         if not os.path.exists(base_filename+rhythm_name):

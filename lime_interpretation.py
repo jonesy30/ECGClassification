@@ -145,8 +145,8 @@ def read_file_for_feature_extraction(file_string, r_index=1):
 
     return found_data_lead_1,found_data_lead_2
 
-two_leads = 0
-model_location = 'saved_models\\lstm\\lstm_model'
+two_leads = 1
+model_location = 'saved_models\\lstm_two_leads\\lstm_model'
 #model = tf.keras.models.load_model(model_location)
 model = tf.keras.models.load_model(model_location, custom_objects={'focal_loss_fixed': focal_loss()})
 
@@ -154,7 +154,7 @@ print(model.summary())
 
 #old normal file: 77001
 #old arrthmia file: 306
-filename = "./mit_bih_processed_data_two_leads_r_marker/network_data/training_set/ecg_44588.txt"
+filename = "./mit_bih_processed_data_two_leads_r_marker/N/ecg_64713.txt"
 f = open(filename, "r")
 ecg = []
 for i,line in enumerate(f):
@@ -169,7 +169,7 @@ for i,line in enumerate(f):
 
         if two_leads == 0:
             line_segments = line_segments[:430]
-            line_segments = [float(x) for x in line_segments]
+        line_segments = [float(x) for x in line_segments]
 
         for item in line_segments:
             ecg.append(item)

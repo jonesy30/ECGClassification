@@ -18,7 +18,7 @@ labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
 
 label_names = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','P':'Paced'}
 
-two_leads = 0
+two_leads = 1
 
 #this is taken directly from tensorflow website (text transformer tutorial)
 #and the transformer chatbot code
@@ -160,17 +160,10 @@ def transformer(num_layers,
                 output_size,
                 name="transformer"):
     
-    inputs = tf.keras.Input(shape=(None, None, d_model), name="inputs")
+    inputs = tf.keras.Input(shape=(None,d_model), name="inputs")
 
-    conv = keras.layers.Conv2D(kernel_size=(5,1), filters=1, strides=3, activation='relu', kernel_initializer='VarianceScaling')(inputs)
-   
-    #conv = keras.layers.Conv1D(kernel_size=5, filters=32, strides=1, activation='relu', kernel_initializer='VarianceScaling')(x)
-
-
-    #enc_padding_mask = tf.keras.layers.Embedding(input_dim=d_model, mask_zero=True)(inputs)
-
-    #enc_padding_mask = tf.keras.layers.Lambda(create_padding_mask, output_shape=(1,1,None))
-    #enc_padding_mask = tf.dtypes.cast(tf.math.reduce_sum(inputs,axis=2,keepdims=False), tf.int32)
+    # conv = keras.layers.Conv1D(kernel_size=(10), filters=1, strides=10, activation='relu', kernel_initializer='VarianceScaling', name='conv')(inputs)
+    # conv = keras.layers.Conv1D(kernel_size=(5), filters=1, strides=5, activation='relu', kernel_initializer='VarianceScaling')(conv)
 
     enc_padding_mask = tf.keras.layers.Lambda(
         create_padding_mask, output_shape=(1, 1, None),
@@ -179,10 +172,19 @@ def transformer(num_layers,
         #Like our input has a dimension of length X d_model but the masking is applied to a vector
         # We get the sum for each row and result is a vector. So, if result is 0 it is because in that position was masked      
         tf.math.reduce_sum(
-        conv,
+        inputs,
         axis=2,
         keepdims=False,
         name=None), tf.int32))
+
+    #conv = keras.layers.Reshape(target_shape=(1,))(conv)
+
+    #d_model = 32
+
+    #enc_padding_mask = tf.keras.layers.Embedding(input_dim=d_model, mask_zero=True)(inputs)
+
+    #enc_padding_mask = tf.keras.layers.Lambda(create_padding_mask, output_shape=(1,1,None))
+    #enc_padding_mask = tf.dtypes.cast(tf.math.reduce_sum(inputs,axis=2,keepdims=False), tf.int32)
 
     enc_outputs = encoder(
         num_layers=num_layers,
@@ -290,7 +292,7 @@ def scaled_dot_product_attention(query, key, value, mask):
 
 base_filename = "./mit_bih_processed_data_two_leads/"
 
-(training_data, training_labels) = read_data(base_filename + "network_data/validation_set/")
+(training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
 ([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
 
 #training_data = validation_data
@@ -300,7 +302,6 @@ training_data = [np.asarray(item) for item in training_data]
 training_data = np.array(training_data)
 
 training_data = training_data[:,np.newaxis,:]
-training_data = training_data[:,:,:,np.newaxis]
 
 training_labels = to_categorical(training_labels, num_classes=len(class_names))
 
@@ -324,7 +325,7 @@ print(training_data.shape)
 
 NUM_LAYERS = 6
 D_MODEL = training_data.shape[2]
-NUM_HEADS = 3
+NUM_HEADS = 5
 UNITS = 128
 DROPOUT = 0.2
 OUTPUT_SIZE = len(class_names)
@@ -336,6 +337,9 @@ model = transformer(num_layers=NUM_LAYERS,
     num_heads=NUM_HEADS,
     dropout=DROPOUT,
     output_size=OUTPUT_SIZE)
+
+# tf.keras.utils.plot_model(model, to_file='transformer.png', show_shapes=True)
+# plt.show()
 
 model.compile(optimizer=tf.keras.optimizers.Adam(0.000001), loss='categorical_crossentropy', metrics=['accuracy'])
 

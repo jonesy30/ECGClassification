@@ -155,19 +155,28 @@ def feature_extract_ecg(ecg_plot, r_index):
     if start_index < 0:
         start_index = 0
     q_wave_subplot = before_r[start_index:]
-    q_point = np.argmin(q_wave_subplot) + start_index
+    if len(q_wave_subplot) == 0:
+        q_point = start_index
+    else:
+        q_point = np.argmin(q_wave_subplot) + start_index
 
     #s-wave
     end_index = int(sampling_rate*0.1)
     s_wave_subplot = after_r[:end_index]
-    s_point = np.argmin(s_wave_subplot) + r_index
+    if len(s_wave_subplot) == 0:
+        s_point = r_index
+    else:
+        s_point = np.argmin(s_wave_subplot) + r_index
 
     ecg_plot_p = butter_highpass_filter(ecg_plot, 5, 360, 2)
     ecg_plot_p = butter_lowpass_filter(ecg_plot_p, 50, 360, 2)
 
     #p-wave
     p_wave_block = ecg_plot_p[:q_point]
-    p_wave_max = np.argmax(p_wave_block)
+    if len(p_wave_block) == 0:
+        p_wave_max = q_point
+    else:
+        p_wave_max = np.argmax(p_wave_block)
 
     # plt.figure()
     # plt.plot(p_wave_block)
@@ -190,15 +199,20 @@ def feature_extract_ecg(ecg_plot, r_index):
         p_wave_end = q_point
 
     p_wave_end_block = ecg_plot_p[p_wave_max:p_wave_end]
-    p_wave_end = np.argmin(p_wave_end_block) + p_wave_max
+    if len(p_wave_end_block) == 0:
+        p_wave_end = p_wave_max
+    else:
+        p_wave_end = np.argmin(p_wave_end_block) + p_wave_max
 
     #t-wave
-    print(s_point)
     t_wave_block = ecg_plot[s_point:]
 
     #t_wave_block = butter_lowpass_filter(t_wave_block, 50, 360, 5)
 
-    t_wave_max = np.argmax(t_wave_block) + s_point
+    if len(t_wave_block) == 0:
+        t_wave_max = s_point
+    else:
+        t_wave_max = np.argmax(t_wave_block) + s_point
 
     t_wave_start = t_wave_max - int(sampling_rate*0.2)
     t_wave_start_block = ecg_plot[t_wave_start:t_wave_max]
@@ -210,7 +224,10 @@ def feature_extract_ecg(ecg_plot, r_index):
 
     t_wave_end = t_wave_max + int(sampling_rate*0.05)
     t_wave_end_block = ecg_plot[t_wave_max:t_wave_end]
-    t_wave_end = np.argmin(t_wave_end_block) + t_wave_max
+    if len(t_wave_end_block) == 0:
+        t_wave_end = t_wave_max
+    else:
+        t_wave_end = np.argmin(t_wave_end_block) + t_wave_max
 
     # print("Q")
     # print(q_point)
@@ -329,7 +346,7 @@ def feature_extract_ecg_old(ecg_plot, r_index):
 if __name__ == "__main__":
 
     #Magic Numbers
-    for f in glob.glob("./mit_bih_processed_data_two_leads_r_marker/N/*.txt"):
+    for f in glob.glob("./mit_bih_processed_data_two_leads_r_marker/V/*.txt"):
         #file_string = "./mit_bih_processed_data_two_leads/N/ecg_10.txt"
         print(f)
 

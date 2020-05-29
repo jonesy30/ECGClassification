@@ -134,9 +134,9 @@ def butter_lowpass_filter(data, cutoff, fs, order):
     y = lfilter(b, a, data)
     return y
 
-model_location = 'saved_models\\lstm\\lstm_model'
-#model = tf.keras.models.load_model(model_location)
-model = tf.keras.models.load_model(model_location, custom_objects={'focal_loss_fixed': focal_loss()})
+model_location = 'saved_models\\cnn_hannun\\cnn_model'
+model = tf.keras.models.load_model(model_location)
+#model = tf.keras.models.load_model(model_location, custom_objects={'focal_loss_fixed': focal_loss()})
 
 print(model.summary())
 
@@ -190,9 +190,9 @@ print(model.summary())
 # outputs = [model.layers[i].output for i in ixs]
 # model = Model(inputs=model.inputs, outputs=outputs)
 
-two_leads = 0
+two_leads = 1
 
-filename = "./mit_bih_processed_data_two_leads_r_marker/network_data/training_set/ecg_354.txt"
+filename = "./mit_bih_processed_data_two_leads_r_marker/A/ecg_7.txt"
 f = open(filename, "r")
 ecg = []
 for i,line in enumerate(f):
@@ -206,7 +206,7 @@ for i,line in enumerate(f):
 
         if two_leads == 0:
             line_segments = line_segments[:430]
-            line_segments = [float(x) for x in line_segments]
+        line_segments = [float(x) for x in line_segments]
 
         for item in line_segments:
             ecg.append(item)
@@ -252,34 +252,83 @@ ecg = expand_dims(ecg, axis=0)
 #         ix += 1
 #     plt.figure()
 
-grads1 = visualize_saliency(model, 5, filter_indices=None, seed_input=ecg,keepdims=True)
-
-upsampling_factor = 25
-
-plot_grads = []
-for item in grads1:
-    for i in range(upsampling_factor):
-        plot_grads.append(item)
-
-ecg_upsampled = signal.resample(ecg_original,upsampling_factor*860)
-
 fig, ax = plt.subplots(figsize=(18,2))
-plt.plot(ecg_original,zorder=1)
-sc = ax.scatter(np.arange(0,860,1/upsampling_factor),ecg_upsampled,c=plot_grads,s=5,zorder=2)
 
-plt.colorbar(sc)
+grads1 = visualize_saliency(model, 40, filter_indices=None, seed_input=ecg,keepdims=True)
 
 #grads1 = grads1[2]
 #grads1 = np.rot90(grads1,k=1)
 #fig, ax = plt.subplots(figsize=(18,2))
 #ax.plot(ecg_plot_filtered)
 #ax.imshow(grads1, cmap='jet',interpolation='nearest',aspect='auto')
-plt.title("Saliency Map - Abonormal (Atrial Premature Beat)")
-plt.grid(which='both')
-plt.minorticks_on()
 
 ecg_lead_1, ecg_lead_2, r_value = read_file_for_feature_extraction(filename)
 ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_lead_1, r_value)
+
+def get_saliency_feature_value(start, end, grads, complete_gradient,ecg,plt):
+    grads_subset = grads[start:end]
+
+    mean_grad = np.mean(grads_subset)
+
+    for i in range(len(grads_subset)):
+        complete_gradient.append(mean_grad)
+
+    #plt.plot(ecg[start:end],color=plt.cm.rainbow(mean_grad))
+
+    return complete_gradient
+
+complete_gradient = []
+
+#before p wave
+complete_gradient = get_saliency_feature_value(0,p_wave_start,grads1,complete_gradient,ecg_original,plt)
+#p-wave
+complete_gradient = get_saliency_feature_value(p_wave_start,p_wave_end,grads1,complete_gradient,ecg_original,plt)
+#p - q
+complete_gradient = get_saliency_feature_value(p_wave_end,q_point,grads1,complete_gradient,ecg_original,plt)
+#q - r
+complete_gradient = get_saliency_feature_value(q_point,r_max_index,grads1,complete_gradient,ecg_original,plt)
+#r - s
+complete_gradient = get_saliency_feature_value(r_max_index,s_point,grads1,complete_gradient,ecg_original,plt)
+#s-t segment
+complete_gradient = get_saliency_feature_value(s_point,t_wave_start,grads1,complete_gradient,ecg_original,plt)
+#t wave
+complete_gradient = get_saliency_feature_value(t_wave_start,t_wave_end,grads1,complete_gradient,ecg_original,plt)
+#after t-wave
+complete_gradient = get_saliency_feature_value(t_wave_end,430,grads1,complete_gradient,ecg_original,plt)
+
+if two_leads == 1:
+    #second lead....
+
+    #before p wave
+    complete_gradient = get_saliency_feature_value(430,p_wave_start+430,grads1,complete_gradient,ecg_original,plt)
+    #p-wave
+    complete_gradient = get_saliency_feature_value(p_wave_start+430,p_wave_end+430,grads1,complete_gradient,ecg_original,plt)
+    #p - q
+    complete_gradient = get_saliency_feature_value(p_wave_end+430,q_point+430,grads1,complete_gradient,ecg_original,plt)
+    #q - r
+    complete_gradient = get_saliency_feature_value(q_point+430,r_max_index+430,grads1,complete_gradient,ecg_original,plt)
+    #r - s
+    complete_gradient = get_saliency_feature_value(r_max_index+430,s_point+430,grads1,complete_gradient,ecg_original,plt)
+    #s-t segment
+    complete_gradient = get_saliency_feature_value(s_point+430,t_wave_start+430,grads1,complete_gradient,ecg_original,plt)
+    #t wave
+    complete_gradient = get_saliency_feature_value(t_wave_start+430,t_wave_end+430,grads1,complete_gradient,ecg_original,plt)
+    #after t-wave
+    complete_gradient = get_saliency_feature_value(t_wave_end+430,860,grads1,complete_gradient,ecg_original,plt)
+
+upsampling_factor = 25
+
+plot_grads = []
+for item in complete_gradient:
+    for i in range(upsampling_factor):
+        plot_grads.append(item)
+
+ecg_upsampled = signal.resample(ecg_original,upsampling_factor*860)
+
+#plt.plot(ecg_original,zorder=1)
+sc = ax.scatter(np.arange(0,860,1/upsampling_factor),ecg_upsampled,c=plot_grads,s=5,zorder=2)
+
+plt.colorbar(sc)
 
 ax.axvspan(p_wave_start, p_wave_end, alpha=0.5, color='coral')
 ax.axvspan(p_wave_start+430, p_wave_end+430, alpha=0.5, color='coral')
@@ -294,16 +343,21 @@ ax.axvspan(t_wave_start, t_wave_end, alpha=0.5, color='lightseagreen')
 ax.axvspan(t_wave_start+430, t_wave_end+430, alpha=0.5, color='lightseagreen')
 
 _, top = ax.get_ylim()
+label_height = 650
 
-plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start, 1600), ha='center', color='coral')
-plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point, 1600), ha='right', color='goldenrod')
-plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index, 1600), color='darkgreen')
-plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start, 1600), ha='center', color='lightseagreen')
+plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start, label_height), ha='center', color='coral')
+plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point, label_height), ha='right', color='goldenrod')
+plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index, label_height), color='darkgreen')
+plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start, label_height), ha='center', color='lightseagreen')
 
-plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start+430, 1600), ha='center', color='coral')
-plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point+430, 1600), ha='right', color='goldenrod')
-plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index+430, 1600), color='darkgreen')
-plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start+430, 1600), ha='center', color='lightseagreen')
+plt.annotate("P-wave",xy=(((p_wave_end-p_wave_start)/2)+p_wave_start+430, label_height), ha='center', color='coral')
+plt.annotate("Q-R",xy=(((r_max_index-q_point)/2)+q_point+430, label_height), ha='right', color='goldenrod')
+plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index+430, label_height), color='darkgreen')
+plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start+430, label_height), ha='center', color='lightseagreen')
+
+plt.title("Saliency Map - Abonormal (Atrial Premature Beat)")
+plt.grid(which='both')
+plt.minorticks_on()
 
 #ax.set_aspect(aspect=0.2)
 plt.figure()

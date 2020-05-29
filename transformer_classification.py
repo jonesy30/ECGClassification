@@ -18,7 +18,7 @@ labels = ["APB","Vesc","Jesc","LBBB","Normal","Paced","RBBB","VT"]
 
 label_names = {'N':'Normal','L':'LBBB','R':'RBBB','A':'APB','a':'AAPB','J':'JUNCTIONAL','S':'SP','V':'VT','r':'RonT','e':'Aesc','j':'Jesc','n':'SPesc','E':'Vesc','P':'Paced'}
 
-two_leads = 0
+two_leads = 1
 
 #this is taken directly from tensorflow website (text transformer tutorial)
 #and the transformer chatbot code
@@ -161,10 +161,9 @@ def transformer(num_layers,
                 name="transformer"):
     
     inputs = tf.keras.Input(shape=(None,d_model), name="inputs")
-    #conv = inputs
 
-    conv = keras.layers.Conv1D(kernel_size=(10), filters=1, strides=10, activation='relu', kernel_initializer='VarianceScaling', name='conv')(inputs)
-    conv = keras.layers.Conv1D(kernel_size=(5), filters=1, strides=5, activation='relu', kernel_initializer='VarianceScaling')(conv)
+    # conv = keras.layers.Conv1D(kernel_size=(10), filters=1, strides=10, activation='relu', kernel_initializer='VarianceScaling', name='conv')(inputs)
+    # conv = keras.layers.Conv1D(kernel_size=(5), filters=1, strides=5, activation='relu', kernel_initializer='VarianceScaling')(conv)
 
     enc_padding_mask = tf.keras.layers.Lambda(
         create_padding_mask, output_shape=(1, 1, None),
@@ -173,7 +172,7 @@ def transformer(num_layers,
         #Like our input has a dimension of length X d_model but the masking is applied to a vector
         # We get the sum for each row and result is a vector. So, if result is 0 it is because in that position was masked      
         tf.math.reduce_sum(
-        conv,
+        inputs,
         axis=2,
         keepdims=False,
         name=None), tf.int32))
@@ -293,8 +292,8 @@ def scaled_dot_product_attention(query, key, value, mask):
 
 base_filename = "./mit_bih_processed_data_two_leads/"
 
-(training_data, training_labels) = read_data(base_filename + "network_data/new_set/")
-([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/new_set/",save_unnormalised=True)
+(training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
+([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
 
 #training_data = validation_data
 #training_labels = validation_labels
@@ -326,7 +325,7 @@ print(training_data.shape)
 
 NUM_LAYERS = 6
 D_MODEL = training_data.shape[2]
-NUM_HEADS = 1
+NUM_HEADS = 5
 UNITS = 128
 DROPOUT = 0.2
 OUTPUT_SIZE = len(class_names)

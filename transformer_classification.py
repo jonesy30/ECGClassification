@@ -290,7 +290,7 @@ def scaled_dot_product_attention(query, key, value, mask):
 
     return tf.matmul(attention_weights, value)
 
-base_filename = "./mit_bih_processed_data_two_leads/"
+base_filename = "./mit_bih_processed_data_two_leads_leave_out_validation/"
 
 (training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
 ([validation_data,unnormalised_validation], validation_labels) = read_data(base_filename + "network_data/validation_set/",save_unnormalised=True)
@@ -347,10 +347,10 @@ history = model.fit(training_data,training_labels, epochs=EPOCHS, validation_dat
 
 if not os.path.exists("./saved_models/"):
     os.makedirs("./saved_models/")
-if not os.path.exists("./saved_models/transformer/"):
-    os.makedirs("./saved_models/transformer/")
+if not os.path.exists("./saved_models/transformer_leave_patients_out/"):
+    os.makedirs("./saved_models/transformer_leave_patients_out/")
 
-model.save(".\\saved_models\\transformer\\transformer_model")
+model.save(".\\saved_models\\transformer_leave_patients_out\\transformer_model")
 
 accuracy = max(history.history['val_accuracy'])
 
@@ -359,4 +359,4 @@ predicted_labels = model.predict(validation_data)
 
 print("Accuracy = "+str(accuracy))
 
-analyse_results(history, validation_data, validation_labels, predicted_labels, "transformer", base_filename, unnormalised_validation, test_acc)
+analyse_results(history, validation_data, validation_labels, predicted_labels, "transformer_leave_patients_out", base_filename, unnormalised_validation, test_acc)

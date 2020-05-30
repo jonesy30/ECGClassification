@@ -108,8 +108,9 @@ def read_data(foldername,save_unnormalised=False):
 
     return data, labels
 
-model_location = 'saved_models\\lstm\\lstm_model'
-new_model = tf.keras.models.load_model(model_location, custom_objects={'focal_loss_fixed': focal_loss()})
+model_location = 'saved_models\\cnn_hannun\\cnn_model'
+#new_model = tf.keras.models.load_model(model_location, custom_objects={'focal_loss_fixed': focal_loss()})
+new_model = tf.keras.models.load_model(model_location)
 
 print(new_model.summary())
 

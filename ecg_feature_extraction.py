@@ -346,7 +346,7 @@ def feature_extract_ecg_old(ecg_plot, r_index):
 if __name__ == "__main__":
 
     #Magic Numbers
-    for f in glob.glob("./mit_bih_processed_data_two_leads_r_marker/R/*.txt"):
+    for f in glob.glob("./mit_bih_processed_data_two_leads_r_marker/E/*.txt"):
         #file_string = "./mit_bih_processed_data_two_leads/N/ecg_10.txt"
         print(f)
 

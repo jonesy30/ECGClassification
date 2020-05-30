@@ -98,7 +98,7 @@ def read_data(foldername,save_unnormalised=False):
 
 start_time = time.time()
 
-base_filename = "./mit_bih_processed_data_two_leads_downsampled_incart/"
+base_filename = "./mit_bih_processed_data_two_leads_leave_out_validation/"
 
 (training_data, training_labels) = read_data(base_filename + "network_data/training_set/")
 
@@ -292,10 +292,10 @@ print(model.summary())
 
 if not os.path.exists("./saved_models/"):
     os.makedirs("./saved_models/")
-if not os.path.exists("./saved_models/cnn_downsampled/"):
-    os.makedirs("./saved_models/cnn_downsampled/")
+if not os.path.exists("./saved_models/cnn_leave_patients_out/"):
+    os.makedirs("./saved_models/cnn_leave_patients_out/")
 
-model.save(".\\saved_models\\cnn_downsampled\\cnn_model")
+model.save(".\\saved_models\\cnn_leave_patients_out\\cnn_model")
 
 print("Evaluating....")
 
@@ -324,4 +324,4 @@ predicted_labels = model.predict(validation_data)
 end_time = time.time()
 print("Time for "+str(epochs)+" epochs = "+str(end_time-start_time))
 
-analyse_results(history, validation_data, validation_labels, predicted_labels, "cnn", base_filename, unnormalised_validation, test_acc)
+analyse_results(history, validation_data, validation_labels, predicted_labels, "cnn_leave_patients_out", base_filename, unnormalised_validation, test_acc)

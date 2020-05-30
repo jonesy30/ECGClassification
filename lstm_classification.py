@@ -117,7 +117,7 @@ def read_data(foldername,save_unnormalised=False):
 
     return data, labels
 
-base_filename = "./mit_bih_processed_data_two_leads/network_data/"
+base_filename = "./mit_bih_processed_data_two_leads_leave_out_validation/network_data/"
 (training_data, training_labels) = read_data(base_filename + "training_set/",save_unnormalised=False)
 
 #Turn each training data array into numpy arrays of numpy arrays
@@ -210,9 +210,9 @@ predicted_labels = model.predict(validation_data)
     
 if not os.path.exists("./saved_models/"):
     os.makedirs("./saved_models/")
-if not os.path.exists("./saved_models/lstm_two_leads/"):
-    os.makedirs("./saved_models/lstm_two_leads/")
+if not os.path.exists("./saved_models/lstm_two_leads_leave_patients_out/"):
+    os.makedirs("./saved_models/lstm_two_leads_leave_patients_out/")
 
-model.save(".\\saved_models\\lstm_two_leads\\lstm_model")
+model.save(".\\saved_models\\lstm_two_leads_leave_patients_out\\lstm_model")
 
-analyse_results(history, validation_data, validation_labels, predicted_labels, "lstm_two_leads", base_filename, unnormalised_validation, test_acc)
+analyse_results(history, validation_data, validation_labels, predicted_labels, "lstm_two_leads_leave_patients_out", base_filename, unnormalised_validation, test_acc)

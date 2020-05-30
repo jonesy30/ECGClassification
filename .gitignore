@@ -109,4 +109,4 @@ venv.bak/
 /hannun*
 /external*
 /saved_ecg_classifications
-/saved_models/transformer
+/saved_models/transformer*

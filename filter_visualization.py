@@ -360,19 +360,19 @@ plt.grid(which='both')
 plt.minorticks_on()
 
 #ax.set_aspect(aspect=0.2)
-plt.figure()
+plt.show()
 
 #Class Activation Mapping
-model.layers[4].activation = activations.linear
-model = utils.apply_modifications(model)
+# model.layers[4].activation = activations.linear
+# model = utils.apply_modifications(model)
 
-c_a_m = visualize_activation(model, 4, filter_indices=1, max_iter=10000,verbose=False)
-plt.title("Class Activation Mapping: AFIB")
-plt.plot(c_a_m)
-plt.figure()
+# c_a_m = visualize_activation(model, 4, filter_indices=1, max_iter=10000,verbose=False)
+# plt.title("Class Activation Mapping: AFIB")
+# plt.plot(c_a_m)
+# plt.figure()
 
-c_a_m = visualize_activation(model, 4, filter_indices=5, max_iter=10000,verbose=False)
-plt.title("Class Activation Mapping: Normal")
-plt.plot(c_a_m)
+# c_a_m = visualize_activation(model, 4, filter_indices=5, max_iter=10000,verbose=False)
+# plt.title("Class Activation Mapping: Normal")
+# plt.plot(c_a_m)
 
-plt.show()
+# plt.show()

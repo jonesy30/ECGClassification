@@ -1,7 +1,7 @@
-Disclaimer: this repo is not clean at all - I will clean it!
+Disclaimer: this repo is not clean at all - cleaning will happen
 
 OVERVIEW
-ECG classification using neural networks
+ECG classification and filter visualisation
 
 RAW DATA TO PROCESSED DATA
 pre_processing and pre_processing_split_samples turns annotated ECG data (found at link below) into ECG signals separated into folders by condition
@@ -20,7 +20,16 @@ Using feature extraction, using raw ecg signal
 CLASSIFICATION
 network_classification - uses fully-connected deep neural network
 cnn_classification - uses a convolutional neural network
-lstm_classification - an attempt to use an LSTM (NOTE: am I abandoning this?)
+lstm_classification - uses an lstm
+transformer_classification - uses a transformer
+
+VISUALISATION
+compare_correct_incorrect_classes - plots which ECGs were classified incorrectly
+ecg_feature_extraction - gets key ECG features (P, Q, R, S)
+filter_visualisation - where the majority of my saliency map code lives
+saliency_map_visualisation - plots saliency map value by ECG feature (by splitting into 0.1 second segments AND key ECG feature)
+lime_interpretation - an attempt to use LIME to visualise these models (unfinished)
+t_sne_test - uses t-SNE to visualise classification
 
 HELPER METHODS
 plot_ecg plots any ECG

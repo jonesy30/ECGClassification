@@ -28,6 +28,7 @@ compare_correct_incorrect_classes - plots which ECGs were classified incorrectly
 ecg_feature_extraction - gets key ECG features (P, Q, R, S)
 filter_visualisation - where the majority of my saliency map code lives
 saliency_map_visualisation - plots saliency map value by ECG feature (by splitting into 0.1 second segments AND key ECG feature)
+plot_saliency_by_interval - produces saliency map plots in Figure 8 in paper
 lime_interpretation - an attempt to use LIME to visualise these models (unfinished)
 t_sne_test - uses t-SNE to visualise classification
 

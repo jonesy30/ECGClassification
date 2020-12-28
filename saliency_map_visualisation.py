@@ -19,6 +19,7 @@ import sys
 import glob
 import time
 import gc
+import pandas as pd
 
 class_names = ['A','E','j','L','N','P','R','V']
 
@@ -110,87 +111,87 @@ model_location = 'saved_models\\cnn_hannun\\cnn_model'
 model = tf.keras.models.load_model(model_location)
 #model = tf.keras.models.load_model(model_location, custom_objects={'focal_loss_fixed': focal_loss()})
 
-print(model.summary())
+# print(model.summary())
+
+# two_leads = 1
+
+
+# base_filename = "./mit_bih_processed_data_two_leads_r_marker/E/"
+# feature_importances = [None]*16
+
+# processed_counter = 0
+# actual_processed_counter = 0
+# gc.enable()
+
+# for file in glob.glob(base_filename+"*.txt"):
+#     processed_counter += 1
+#     if processed_counter % 1 == 0:
+#         actual_processed_counter+=1
+#         start_time = time.time()
+
+#         f = open(file, "r")
+#         ecg = []
+#         for i,line in enumerate(f):
+#             line = line.replace("\n","")
+#             line_segments = line.split()
+
+#             r_value = line_segments[-1]
+#             del line_segments[-1]
+
+#             if two_leads == 0:
+#                 line_segments = line_segments[:430]
+#             line_segments = [float(x) for x in line_segments]
+
+#             for item in line_segments:
+#                 ecg.append(item)
+#         f.close()
+
+#         ecg_lead_1, ecg_lead_2, r_value = read_file_for_feature_extraction(file)
+
+#         ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_lead_1, r_value)
+
+#         segment_block = [0,p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end, 430, p_wave_start+430, p_wave_end+430, q_point+430, r_max_index+430, s_point+430, t_wave_start+430, t_wave_end+430, 860]
+
+#         ecg = [np.asarray(item) for item in ecg]
+#         ecg = np.array(ecg)
+
+#         ecg = ecg[:, np.newaxis]
+#         ecg = expand_dims(ecg, axis=0)
+
+#         start_time_time = time.time()
+#         grads = visualize_saliency(model, 40, filter_indices=None, seed_input=ecg, keepdims=True)
+#         end_time_time = time.time()
+
+#         if actual_processed_counter % 10 == 0:
+#             gc.collect()
+
+#         for i in range(16):
+
+#             grads_subset = grads[segment_block[i]:segment_block[i+1]]
+#             mean_grad = np.mean(grads_subset)
+#             if feature_importances[i] == None:
+#                 feature_importances[i] = [mean_grad]
+#             else:
+#                 feature_importances[i].append(mean_grad)
+
+#         end_time = time.time()
+#         print("Processed counter = "+str(actual_processed_counter))
+#         print("Time for file = "+str(end_time-start_time))
+#         print(end_time_time - start_time_time)
+
+# #gc.disable()
+# feature_list = []
+# for sub_list in feature_importances:
+#     feature_mean = np.nanmean(sub_list)
+#     feature_list.append(feature_mean)
+# print(feature_list)
+
+# print("Actually Processed")
+# print(actual_processed_counter)
 
 two_leads = 1
 
-
-base_filename = "./mit_bih_processed_data_two_leads_r_marker/E/"
-feature_importances = [None]*16
-
-processed_counter = 0
-actual_processed_counter = 0
-gc.enable()
-
-for file in glob.glob(base_filename+"*.txt"):
-    processed_counter += 1
-    if processed_counter % 1 == 0:
-        actual_processed_counter+=1
-        start_time = time.time()
-
-        f = open(file, "r")
-        ecg = []
-        for i,line in enumerate(f):
-            line = line.replace("\n","")
-            line_segments = line.split()
-
-            r_value = line_segments[-1]
-            del line_segments[-1]
-
-            if two_leads == 0:
-                line_segments = line_segments[:430]
-            line_segments = [float(x) for x in line_segments]
-
-            for item in line_segments:
-                ecg.append(item)
-        f.close()
-
-        ecg_lead_1, ecg_lead_2, r_value = read_file_for_feature_extraction(file)
-
-        ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_lead_1, r_value)
-
-        segment_block = [0,p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end, 430, p_wave_start+430, p_wave_end+430, q_point+430, r_max_index+430, s_point+430, t_wave_start+430, t_wave_end+430, 860]
-
-        ecg = [np.asarray(item) for item in ecg]
-        ecg = np.array(ecg)
-
-        ecg = ecg[:, np.newaxis]
-        ecg = expand_dims(ecg, axis=0)
-
-        start_time_time = time.time()
-        grads = visualize_saliency(model, 40, filter_indices=None, seed_input=ecg, keepdims=True)
-        end_time_time = time.time()
-
-        if actual_processed_counter % 10 == 0:
-            gc.collect()
-
-        for i in range(16):
-
-            grads_subset = grads[segment_block[i]:segment_block[i+1]]
-            mean_grad = np.mean(grads_subset)
-            if feature_importances[i] == None:
-                feature_importances[i] = [mean_grad]
-            else:
-                feature_importances[i].append(mean_grad)
-
-        end_time = time.time()
-        print("Processed counter = "+str(actual_processed_counter))
-        print("Time for file = "+str(end_time-start_time))
-        print(end_time_time - start_time_time)
-
-#gc.disable()
-feature_list = []
-for sub_list in feature_importances:
-    feature_mean = np.nanmean(sub_list)
-    feature_list.append(feature_mean)
-print(feature_list)
-
-print("Actually Processed")
-print(actual_processed_counter)
-
-two_leads = 1
-
-filename = "./mit_bih_processed_data_two_leads_r_marker/E/ecg_61046.txt"
+filename = "./mit_bih_processed_data_two_leads_r_marker/V/ecg_101497.txt"
 f = open(filename, "r")
 ecg = []
 for i,line in enumerate(f):
@@ -200,6 +201,7 @@ for i,line in enumerate(f):
         line_segments = line.split()
 
         r_value = line_segments[-1]
+        r_value = int(r_value)
         del line_segments[-1]
 
         if two_leads == 0:
@@ -252,19 +254,128 @@ ecg = expand_dims(ecg, axis=0)
 
 fig, ax = plt.subplots(figsize=(18,2))
 
-ecg_lead_1, ecg_lead_2, r_value = read_file_for_feature_extraction(filename)
-ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_lead_1, r_value)
+df_file = pd.read_csv("C:/Users/yolaj/Dropbox/PhD/My Papers/IEEE BIBE/csv files/segments_V.csv")
+mean_gradients = df_file.iloc[-3]
 
-segment_block = [0,p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end, 430, p_wave_start+430, p_wave_end+430, q_point+430, r_max_index+430, s_point+430, t_wave_start+430, t_wave_end+430, 860]
-segment_descriptors = ["start","P-wave_start","P-wave_end","Q","R","S","T-wave_start","T-wave_end","new lead","P-wave_start","P-wave_end","Q","R","S","T-wave_start","T-wave_end","end"]
+interval = int(0.1 * 360) #0.1 seconds * sampling rate
+
+mean_values_a = []
+segments_a = []
+
+end_index = r_value
+start_column = "-A"
+i = 1
+while end_index > 0:
+
+    column = start_column + str(i)
+    mean_value = mean_gradients[column]
+    mean_value = float(mean_value)
+
+    mean_values_a.append(mean_value)
+    
+    start_index = end_index - interval
+
+    if start_index < 0:
+        start_index = 0
+    segments_a.append([start_index, end_index])
+
+    end_index = start_index
+
+    i += 1
+
+mean_values_a.reverse()
+segments_a.reverse()
+
+start_index = r_value
+start_column = "+A"
+i = 1
+while start_index < 430:
+
+    column = start_column + str(i)
+    mean_value = mean_gradients[column]
+    mean_value = float(mean_value)
+
+    mean_values_a.append(mean_value)
+    
+    end_index = start_index + interval
+
+    if end_index > 430:
+        end_index = 430
+    segments_a.append([start_index, end_index])
+
+    start_index = end_index
+
+    i += 1
+
+mean_values_b = []
+segments_b = []
+
+end_index = r_value
+start_column = "-B"
+i = 1
+while end_index > 0:
+
+    column = start_column + str(i)
+    mean_value = mean_gradients[column]
+    mean_value = float(mean_value)
+
+    mean_values_b.append(mean_value)
+    
+    start_index = end_index - interval
+
+    if start_index < 0:
+        start_index = 0
+    segments_b.append([start_index+430, end_index+430])
+
+    end_index = start_index
+
+    i += 1
+
+mean_values_b.reverse()
+segments_b.reverse()
+
+start_index = r_value
+start_column = "+B"
+i = 1
+while start_index < 430:
+
+    column = start_column + str(i)
+    mean_value = mean_gradients[column]
+    mean_value = float(mean_value)
+
+    mean_values_a.append(mean_value)
+    
+    end_index = start_index + interval
+
+    if end_index > 430:
+        end_index = 430
+    segments_b.append([start_index+430, end_index+430])
+
+    start_index = end_index
+
+    i += 1
+
+for item in mean_values_b:
+    mean_values_a.append(item)
+
+for item in segments_b:
+    segments_a.append(item)
+
+#ecg_lead_1, ecg_lead_2, r_value = read_file_for_feature_extraction(filename)
+#ecg_plot, p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end = feature_extract_ecg(ecg_lead_1, r_value)
+
+#segment_block = [0,p_wave_start, p_wave_end, q_point, r_max_index, s_point, t_wave_start, t_wave_end, 430, p_wave_start+430, p_wave_end+430, q_point+430, r_max_index+430, s_point+430, t_wave_start+430, t_wave_end+430, 860]
+#segment_descriptors = ["start","P-wave_start","P-wave_end","Q","R","S","T-wave_start","T-wave_end","new lead","P-wave_start","P-wave_end","Q","R","S","T-wave_start","T-wave_end","end"]
 
 upsampling_factor = 25
 
 plot_grads = []
-for index,item in enumerate(feature_list):
+for index,item in enumerate(segments_a):
 
-    start = segment_block[index]
-    end = segment_block[index+1]
+    mean_value = mean_values_a[index]
+
+    start = item[0]
+    end = item[1]
 
     if end == 860:
         end = 859
@@ -274,7 +385,7 @@ for index,item in enumerate(feature_list):
     print(end)
     print()
 
-    plt.plot(np.arange(start,end+1,1),ecg_original[start:end+1],color=plt.cm.nipy_spectral(item))
+    plt.plot(np.arange(start,end+1,1),ecg_original[start:end+1],color=plt.cm.jet_r(mean_value))
 
     #length = end-start
 
@@ -286,17 +397,17 @@ for index,item in enumerate(feature_list):
 #plt.plot(ecg_original,zorder=1)
 #sc = ax.scatter(np.arange(0,860,1/upsampling_factor),ecg_upsampled,marker="D",c=plot_grads,s=5,zorder=2)
 
-cmap = plt.cm.ScalarMappable(cmap=plt.cm.nipy_spectral)
+cmap = plt.cm.ScalarMappable(cmap=plt.cm.jet_r)
 fig.colorbar(cmap)
 
-for index,i in enumerate(segment_block):
-    plt.plot([i,i],[-10,10],color='black')
+# for index,i in enumerate(segment_block):
+#     plt.plot([i,i],[-10,10],color='black')
 
-    if index % 2 == 0:
-        y_point = 15
-    else:
-        y_point = -35
-    plt.annotate(segment_descriptors[index],xy=(i,y_point),ha='center',color='black',size=7)
+#     if index % 2 == 0:
+#         y_point = 15
+#     else:
+#         y_point = -35
+#     plt.annotate(segment_descriptors[index],xy=(i,y_point),ha='center',color='black',size=7)
     
 
 # ax.axvspan(p_wave_start, p_wave_end, alpha=0.5, color='coral')
@@ -324,7 +435,7 @@ for index,i in enumerate(segment_block):
 # plt.annotate("R-S",xy=(((s_point-r_max_index)/2)+r_max_index+430, label_height), color='darkgreen')
 # plt.annotate("T-wave",xy=(((t_wave_end-t_wave_start)/2)+t_wave_start+430, label_height), ha='center', color='lightseagreen')
 
-plt.title("Saliency Map - Average Contribution Per Feature (Ventricular Escape Beat)")
+plt.title("Saliency Map - Average Contribution Per Feature (Premature Ventricular Contraction)")
 plt.grid(which='both')
 plt.minorticks_on()
 

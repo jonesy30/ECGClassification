@@ -10,15 +10,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Dense, LSTM, Bidirectional, Dropout
+from keras.layers import Dense, LSTM, Bidirectional, Dropout, Conv1D
 from keras.layers.embeddings import Embedding
 import pandas as pd
 from tensorflow.keras.utils import to_categorical
 from analyse_ml_results import analyse_results
 import tensorflow as tf
+from sklearn.utils import resample
 
 class_names = ['A','E','j','L','N','P','R','V']
-two_leads = 1
+two_leads = 0
 
 def focal_loss(gamma=2., alpha=4.):
 
@@ -117,7 +118,7 @@ def read_data(foldername,save_unnormalised=False):
 
     return data, labels
 
-base_filename = "./mit_bih_processed_data_two_leads_leave_out_validation/network_data/"
+base_filename = "./mit_bih_processed_data_two_leads/network_data/"
 (training_data, training_labels) = read_data(base_filename + "training_set/",save_unnormalised=False)
 
 #Turn each training data array into numpy arrays of numpy arrays
@@ -128,29 +129,44 @@ training_data = np.array(training_data)
 training_labels = [np.asarray(item) for item in training_labels]
 training_labels = np.array(training_labels)
 
-#Upsample the data to amplify lesser classes
-df = pd.DataFrame(training_data)
-df['label'] = training_labels
+upsampling_flag = 1
+if upsampling_flag == 1:
+    #Upsample the data to amplify lesser classes
+    df = pd.DataFrame(training_data)
+    df['label'] = training_labels
 
-#Get the size of the largest class (so I know how much to upsample by)
-max_label = df['label'].value_counts().idxmax()
-max_number = df['label'].value_counts()[max_label]
+    #Get the size of the largest class (so I know how much to upsample by)
+    print("Downsampling")
+    print(df['label'].value_counts())
 
-#Create an upsampling space, initially fill it with the largest category
-df_oversampled = df[df['label']==max_label]
+    max_label = df['label'].value_counts().idxmax()
 
-#For each smaller class, oversample it and add to the oversampling space
-for value in range(df['label'].nunique()):
-    if value != max_label:
-        df_class = df[df['label']==value]
-        df_class_over = df_class.sample(max_number, replace=True)
-        df_class_over = pd.DataFrame(df_class_over)
-        df_oversampled = pd.concat([df_oversampled, df_class_over])
+    downsampled_df = df[df['label']!=max_label]
+    second_max_class = downsampled_df['label'].value_counts().max()
+    df_majority_downsampled = resample(df[df['label']==max_label], replace=False, n_samples=second_max_class, random_state=123)
 
-#Convert the upsampled data to training and labelled data
-training_labels = df_oversampled['label'].tolist()
-training_data = df_oversampled.drop(columns='label').to_numpy()
-#Aaaaand we're done upsampling! Hooray!
+    downsampled_df = pd.concat([df_majority_downsampled, downsampled_df])
+    print(downsampled_df['label'].value_counts())
+
+    max_number = downsampled_df['label'].value_counts()[max_label]
+
+    #Create an upsampling space, initially fill it with the largest category
+    df_oversampled = downsampled_df[downsampled_df['label']==max_label]
+
+    #For each smaller class, oversample it and add to the oversampling space
+    for value in range(downsampled_df['label'].nunique()):
+        if value != max_label:
+            df_class = downsampled_df[downsampled_df['label']==value]
+            df_class_over = df_class.sample(max_number, replace=True)
+            df_class_over = pd.DataFrame(df_class_over)
+            df_oversampled = pd.concat([df_oversampled, df_class_over])
+
+    print(df_oversampled['label'].value_counts())
+
+    #Convert the upsampled data to training and labelled data
+    training_labels = df_oversampled['label'].tolist()
+    training_data = df_oversampled.drop(columns='label').to_numpy()
+    #Aaaaand we're done upsampling! Hooray!
 
 #Resize training data to fit CNN input layer and convert labels to one-hot encoding
 training_data = training_data[:, :, np.newaxis]
@@ -165,19 +181,21 @@ else:
 model = Sequential()
 #model.add(Embedding(200, embedding_vecor_length, input_length=max_length))
 #model.add(Bidirectional(LSTM(64, return_sequences=False, input_shape=(input_shape, 1))))
-model.add(LSTM(64, return_sequences=False, input_shape=(input_shape, 1)))
+model.add(LSTM(128, return_sequences=True, input_shape=(input_shape, 1)))
+model.add(Conv1D(kernel_size=16, filters=32, strides=1))
 # model.add(Dropout(0.2))
 # model.add(LSTM(60))
 # model.add(Dropout(0.2))
 model.add(Dense(32, activation=tf.nn.relu))
+model.add(Dense(16, activation=tf.nn.relu))
 model.add(Dense(len(class_names), activation='softmax'))
 
-epochs = 20
+epochs = 2
 batch_size = 128
 
 print("Epochs = "+str(epochs))
 
-model.compile(loss=focal_loss(alpha=1), optimizer='nadam', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='nadam', metrics=['accuracy'])
 history = model.fit(training_data, training_labels, epochs=epochs, batch_size=batch_size, validation_split=0.1)
 
 print("History Keys")
@@ -210,9 +228,9 @@ predicted_labels = model.predict(validation_data)
     
 if not os.path.exists("./saved_models/"):
     os.makedirs("./saved_models/")
-if not os.path.exists("./saved_models/lstm_two_leads_leave_patients_out/"):
-    os.makedirs("./saved_models/lstm_two_leads_leave_patients_out/")
+if not os.path.exists("./saved_models/lstm_test/"):
+    os.makedirs("./saved_models/lstm_test/")
 
-model.save(".\\saved_models\\lstm_two_leads_leave_patients_out\\lstm_model")
+model.save(".\\saved_models\\lstm_test\\lstm_model")
 
-analyse_results(history, validation_data, validation_labels, predicted_labels, "lstm_two_leads_leave_patients_out", base_filename, unnormalised_validation, test_acc)
+analyse_results(history, validation_data, validation_labels, predicted_labels, "lstm_test", base_filename, unnormalised_validation, test_acc)

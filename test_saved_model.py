@@ -116,7 +116,8 @@ print(new_model.summary())
 
 #base_filename = "./external_validation_data/st_petersburg_downsampled/network_data/complete_set/"
 
-base_filename = "./mit_bih_processed_data_two_leads/network_data/new_set/"
+base_filename = "./mit_bih_processed_data_two_leads/network_data/validation_set/"
+#base_filename = "./validation_set/"
 
 #base_filename + "network_data/validation_set/"
 #"hannun_validation_data/""

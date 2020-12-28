@@ -9,6 +9,7 @@ from analyse_ml_results import analyse_results
 from tensorflow.keras.models import Model
 from numpy import expand_dims
 from vis.visualization import visualize_saliency
+from vis.visualization import visualize_cam
 from vis.visualization import visualize_activation
 from tensorflow.keras import activations
 from vis.utils import utils
@@ -16,6 +17,8 @@ from scipy.signal import butter, lfilter, freqz
 from scipy import signal
 from ecg_feature_extraction import feature_extract_ecg
 import sys
+from tensorflow.keras import backend as K
+import pandas as pd
 
 class_names = ['A','E','j','L','N','P','R','V']
 
@@ -71,16 +74,37 @@ def normalize(ecg_signal):
     return [a * -50 for a in normalised]
     #return [np.float32(a) for a in normalised]
 
-model_location = 'saved_models\\lstm_two_leads\\lstm_model'
-#model = tf.keras.models.load_model(model_location)
-model = tf.keras.models.load_model(model_location, custom_objects={'focal_loss_fixed': focal_loss()})
+# def compile_saliency_function(model):
+#     """
+#     Compiles a function to compute the saliency maps and predicted classes
+#     for a given minibatch of input images.
+#     """
+#     inp = model.layers[0].input
+#     outp = model.layers[-1].output
+#     max_outp = K.max(outp, axis=1)
+
+#     with tf.GradientTape() as tape:
+#         preds = model(inp)
+
+#     grads = tape.gradient(preds, model.get_layer("fc1").trainable_variables)
+
+#     #saliency = K.gradients(keras.backend.sum(max_outp), inp)[0]
+#     max_class = K.argmax(outp, axis=1)
+#     return K.function([inp], [saliency, max_class])
+
+model_location = 'saved_models\\cnn_hannun\\cnn_model'
+model = tf.keras.models.load_model(model_location)
+#model = tf.keras.models.load_model(model_location, custom_objects={'focal_loss_fixed': focal_loss()})
 
 print(model.summary())
 
 two_leads = 1
 
-filename = "./just_testing/E/pred_A_278.txt"
-#filename = "./mit_bih_processed_data_two_leads/A/ecg_7.txt"
+#filename = "./just_testing/E/pred_A_278.txt"
+filename = "./mit_bih_processed_data_two_leads_r_marker/E/ecg_61046.txt"
+
+r_marker = 1
+
 f = open(filename, "r")
 ecg = []
 for i,line in enumerate(f):
@@ -88,6 +112,10 @@ for i,line in enumerate(f):
     #ECG signal stored in first line separated by spaces
     if i < 1:
         line_segments = line.split()
+
+        if r_marker == 1:
+            index_of_r = int(line_segments[-1])
+            del line_segments[-1]
 
         if two_leads == 0:
             line_segments = line_segments[:430]
@@ -109,25 +137,129 @@ ecg = np.array(ecg)
 ecg = ecg[:, np.newaxis]
 ecg = expand_dims(ecg, axis=0)
 
-fig, ax = plt.subplots(figsize=(18,2))
+#grads1 = visualize_saliency(model, 40, filter_indices=None, seed_input=ecg)
 
-grads1 = visualize_saliency(model, 0, filter_indices=None, seed_input=ecg,keepdims=True)
+mean_gradients = pd.read_csv("C:/Users/yolaj/Dropbox/PhD/My Papers/IEEE BIBE/csv files/segments_E_mean.csv",nrows=2)
 
+interval = int(0.1 * 360) #0.1 seconds * sampling rate
+
+lead_a = []
+start_index = index_of_r
+
+start_column = "-A"
+i = 1
+while start_index > 0:
+
+    column = start_column + str(i)
+    mean_value = mean_gradients[column].values[0]
+    mean_value = float(mean_value)
+
+    if start_index < 36:
+        this_interval = index_of_r - len(lead_a)
+    else:
+        this_interval = 36
+
+    for j in range(this_interval):
+        lead_a.append(mean_value)
+
+    start_index = start_index - interval
+    i += 1
+
+lead_a.reverse()
+
+start_index = index_of_r
+start_column = "+A"
+i = 1
+while start_index < 430:
+
+    column = start_column + str(i)
+    mean_value = mean_gradients[column].values[0]
+    mean_value = float(mean_value)
+
+    if start_index > 394:
+        this_interval = 430 - len(lead_a)
+    else:
+        this_interval = 36
+
+    for j in range(this_interval):
+        lead_a.append(mean_value)
+
+    start_index = start_index + interval
+    i += 1
+
+lead_b = []
+start_index = index_of_r
+
+start_column = "-B"
+i = 1
+while start_index > 0:
+
+    column = start_column + str(i)
+    mean_value = mean_gradients[column].values[0]
+    mean_value = float(mean_value)
+
+    if start_index < 36:
+        this_interval = index_of_r - len(lead_b)
+    else:
+        this_interval = 36
+
+    for j in range(this_interval):
+        lead_b.append(mean_value)
+
+    start_index = start_index - interval
+    i += 1
+
+lead_b.reverse()
+
+start_index = index_of_r
+start_column = "+B"
+i = 1
+while start_index < 430:
+
+    column = start_column + str(i)
+    mean_value = mean_gradients[column].values[0]
+    mean_value = float(mean_value)
+
+    if start_index > 394:
+        this_interval = 430 - len(lead_b)
+    else:
+        this_interval = 36
+
+    for j in range(this_interval):
+        lead_b.append(mean_value)
+
+    start_index = start_index + interval
+    i += 1
+
+for item in lead_b:
+    lead_a.append(item)
+
+complete_gradients = lead_a
+
+#grads1 = compile_saliency_function(model)([ecg, 0])
 upsampling_factor = 25
 
 plot_grads = []
-for item in grads1:
+for item in complete_gradients:
     for i in range(upsampling_factor):
         plot_grads.append(item)
 
-ecg_upsampled = signal.resample(ecg_original,upsampling_factor*860)
+print(len(plot_grads))
 
-#plt.plot(ecg_original,zorder=1)
-sc = ax.scatter(np.arange(0,860,1/upsampling_factor),ecg_upsampled,c=plot_grads,s=5,zorder=2)
+if two_leads == 1:
+    length = 860
+else:
+    length = 430
+
+fig, ax = plt.subplots(figsize=(18,2))
+
+ecg_upsampled = signal.resample(ecg_original,upsampling_factor*length)
+#sc = ax.scatter(np.arange(0,length,1),ecg,c=complete_gradients)
+sc = ax.scatter(np.arange(0,length,1/upsampling_factor),ecg_upsampled,c=plot_grads,s=5,zorder=2)
 
 plt.colorbar(sc)
 
-plt.title("Saliency Map - Abonormal (Atrial Premature Beat)")
+plt.title("Saliency Map - Mean Junctional Escape Beat Saliency Values")
 plt.grid(which='both')
 plt.minorticks_on()
 

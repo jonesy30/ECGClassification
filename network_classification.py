@@ -187,7 +187,7 @@ print("Finished reading validation, evaluating...")
 
 #format the validation data into a numpy array of numpy arrays
 validation_data = [np.asarray(item) for item in validation_data]
-validation_data = np.array(validation_data)
+validation_data = np.array(validation_data)u66d5d
 
 #format the validation labels into a numpy array
 validation_labels = [np.asarray(item) for item in validation_labels]
